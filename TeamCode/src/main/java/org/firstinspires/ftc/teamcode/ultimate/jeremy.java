@@ -88,10 +88,16 @@ public abstract class jeremy extends LinearOpMode {
         //resetEncoders();
         //motorsWithEncoders();
         //
-        //3setMotorReversals();
+        //setMotorReversals();
         //
         initGyro();
-        //initDoge();
+        initOpen();
+    }
+    //
+    public void YodaInit(){
+        //
+        initGyro();
+        initOpen();
     }
     //
     public void InitLite(){
@@ -1164,30 +1170,30 @@ public abstract class jeremy extends LinearOpMode {
     //</editor-fold>
     //
     //<editor-fold desc="Operations">
-    public double getXOdometry(double xWheel, double yWheel, double angleChange, double origin){
+    public double getXOdometry(double xWheel, double yWheel, double origin){
         //
-        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, angleChange);
-        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, angleChange);
+        double cang = fixAngle(getAngle() - origin);
+        //
+        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);
+        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, cang);
         //
         double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude
         double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle
-        //
-        double cang = fixAngle(getAngle() - origin);
         //
         double aGlob = aLoc + cang;
         //
         return total * Math.cos(Math.toRadians(aGlob));
     }
     //
-    public double getYOdometry(double xWheel, double yWheel, double angleChange, double origin){
+    public double getYOdometry(double xWheel, double yWheel, double origin){
         //
-        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, angleChange);
-        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, angleChange);
+        double cang = fixAngle(getAngle() - origin);
+        //
+        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);
+        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, cang);
         //
         double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude
         double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle
-        //
-        double cang = fixAngle(getAngle() - origin);
         //
         double aGlob = aLoc + cang;
         //

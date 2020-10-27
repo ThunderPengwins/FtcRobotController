@@ -56,6 +56,8 @@ public class StoneOrientationExample extends LinearOpMode {
     //
     OpenCvCamera webcam;
     //
+    boolean aPressed = false;
+    //
     @Override
     public void runOpMode() {
         /**
@@ -98,6 +100,13 @@ public class StoneOrientationExample extends LinearOpMode {
                 for(StoneOrientationAnalysisPipeline.AnalyzedStone stone : stones){
                     telemetry.addLine(String.format("Stone: Orientation=%s, Angle=%f", stone.orientation.toString(), stone.angle));
                 }
+            }
+            //
+            if(gamepad1.a && !aPressed){
+                pipeline.onViewportTapped();
+                aPressed = true;
+            }else if(!gamepad1.a && aPressed){
+                aPressed = false;
             }
             //
             telemetry.update();
@@ -401,9 +410,8 @@ public class StoneOrientationExample extends LinearOpMode {
                 internalStoneList.add(analyzedStone);
             }
         }
-
-        static class ContourRegionAnalysis
-        {
+        //
+        static class ContourRegionAnalysis {
             /*
              * This class holds the results of analyzeContourRegion()
              */
@@ -413,9 +421,8 @@ public class StoneOrientationExample extends LinearOpMode {
             double density;
             List<MatOfPoint> listHolderOfMatOfPoint;
         }
-
-        static ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints)
-        {
+        //
+        static ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints) {
             // drawContours() requires a LIST of contours (there's no singular drawContour()
             // method), so we have to make a list, even though we're only going to use a single
             // position in it...
@@ -462,9 +469,8 @@ public class StoneOrientationExample extends LinearOpMode {
                 return null;
             }
         }
-
-        static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle)
-        {
+        //
+        static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle) {
             // Note: we return a point, but really it's not a point in space, we're
             // simply using it to hold X & Y displacement values from the middle point
             // of the bounding rect.
@@ -483,9 +489,8 @@ public class StoneOrientationExample extends LinearOpMode {
 
             return point;
         }
-
-        static void drawTagText(RotatedRect rect, String text, Mat mat)
-        {
+        //
+        static void drawTagText(RotatedRect rect, String text, Mat mat) {
             Imgproc.putText(
                     mat, // The buffer we're drawing on
                     text, // The text we're drawing
@@ -497,9 +502,8 @@ public class StoneOrientationExample extends LinearOpMode {
                     TEAL, // Font color
                     1); // Font thickness
         }
-
-        static void drawRotatedRect(RotatedRect rect, Mat drawOn)
-        {
+        //
+        static void drawRotatedRect(RotatedRect rect, Mat drawOn) {
             /*
              * Draws a rotated rect by drawing each of the 4 lines individually
              */

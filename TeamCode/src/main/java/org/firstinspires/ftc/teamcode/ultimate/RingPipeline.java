@@ -4,8 +4,8 @@ import org.opencv.core.Core;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
-import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.RotatedRect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
@@ -20,7 +20,7 @@ public class RingPipeline extends OpenCvPipeline {
     /*
      * Our working image buffers
      */
-    Mat cbMat = new Mat();
+    Mat orangeMat = new Mat();//blue mat
     Mat thresholdMat = new Mat();
     Mat morphedThreshold = new Mat();
     Mat contoursOnPlainImageMat = new Mat();
@@ -40,27 +40,27 @@ public class RingPipeline extends OpenCvPipeline {
     /*
      * Colors
      */
+    static final Scalar WHITE = new Scalar(255, 255, 255);
     static final Scalar TEAL = new Scalar(3, 148, 252);
     static final Scalar PURPLE = new Scalar(158, 52, 235);
     static final Scalar RED = new Scalar(255, 0, 0);
     static final Scalar GREEN = new Scalar(0, 255, 0);
     static final Scalar BLUE = new Scalar(0, 0, 255);
+    static final Scalar ORANGE = new Scalar(255, 204, 0);//less saturated: (255, 220, 82), even less: (255, 230, 130)
     //
     static final int CONTOUR_LINE_THICKNESS = 2;
     static final int CB_CHAN_IDX = 2;
     //
     static class AnalyzedStone {
-        StoneOrientationExample.StoneOrientationAnalysisPipeline.StoneOrientation orientation;
-        double angle;
+        double area;
+        int position;
+        Rect bound;
+        double height;
+        double width;
     }
     //
-    enum StoneOrientation {
-        UPRIGHT,
-        NOT_UPRIGHT
-    }
-    //
-    ArrayList<StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone> internalStoneList = new ArrayList<>();
-    volatile ArrayList<StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone> clientStoneList = new ArrayList<>();
+    ArrayList<AnalyzedStone> internalStoneList = new ArrayList<>();
+    volatile ArrayList<AnalyzedStone> clientStoneList = new ArrayList<>();
     //
     /*
      * Some stuff to handle returning our various buffers
@@ -73,7 +73,7 @@ public class RingPipeline extends OpenCvPipeline {
         CONTOURS;
     }
     //
-    StoneOrientationExample.StoneOrientationAnalysisPipeline.Stage[] stages = StoneOrientationExample.StoneOrientationAnalysisPipeline.Stage.values();
+    Stage[] stages = Stage.values();
     //
     // Keep track of what stage the viewport is showing
     int stageNum = 0;
@@ -95,8 +95,8 @@ public class RingPipeline extends OpenCvPipeline {
         stageNum = nextStageNum;
     }
     //
-    @Override
-    public Mat processFrame(Mat input) {
+    @Override//updated in loop
+    public Mat processFrame(Mat input) {//constantly called
         // We'll be updating this with new data below
         internalStoneList.clear();
         //
@@ -114,7 +114,7 @@ public class RingPipeline extends OpenCvPipeline {
          */
         switch (stages[stageNum]) {
             case Cb: {
-                return cbMat;
+                return orangeMat;
             }
             //
             case FINAL: {
@@ -137,20 +137,23 @@ public class RingPipeline extends OpenCvPipeline {
         return input;
     }
     //
-    public ArrayList<StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone> getDetectedStones() {
+    public ArrayList<AnalyzedStone> getDetectedStones() {
         return clientStoneList;
     }
     //
-    ArrayList<MatOfPoint> findContours(Mat input) {
+    ArrayList<MatOfPoint> findContours(Mat input) {//called in update loop
         // A list we'll be using to store the contours we find
         ArrayList<MatOfPoint> contoursList = new ArrayList<>();
         //
-        // Convert the input image to YCrCb color space, then extract the Cb channel
-        Imgproc.cvtColor(input, cbMat, Imgproc.COLOR_RGB2YCrCb);
-        Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
+        // Convert the input image to YCrCb color space, then extract the Cb channel (luma, red, and blue, luma is light sun)
+        Imgproc.cvtColor(input, orangeMat, Imgproc.COLOR_RGB2YCrCb);
+        //Core.extractChannel(cbMat, cbMat, CB_CHAN_IDX);
+        //cbMat = cbMat.colRange(ORANGE, WHITE);
+        Core.inRange(input, new Scalar(0,0,0), new Scalar(255,255,255), orangeMat);
+        //Core.invert(orangeMat, orangeMat);
         //
         // Threshold the Cb channel to form a mask, then run some noise reduction
-        Imgproc.threshold(cbMat, thresholdMat, CB_CHAN_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY_INV);
+        Imgproc.threshold(orangeMat, thresholdMat, CB_CHAN_MASK_THRESHOLD, 255, Imgproc.THRESH_BINARY_INV);
         morphMask(thresholdMat, morphedThreshold);
         //
         // Ok, now actually look for the contours! We only look for external contours.
@@ -163,7 +166,7 @@ public class RingPipeline extends OpenCvPipeline {
         return contoursList;
     }
     //
-    void morphMask(Mat input, Mat output) {
+    void morphMask(Mat input, Mat output) {//called during find contours
         /*
          * Apply some erosion and dilation for noise reduction
          */
@@ -175,159 +178,37 @@ public class RingPipeline extends OpenCvPipeline {
         Imgproc.dilate(output, output, dilateElement);
     }
     //
-    void analyzeContour(MatOfPoint contour, Mat input) {
-        // Transform the contour to a different format
-        Point[] points = contour.toArray();
-        MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+    void analyzeContour(MatOfPoint contour, Mat input) {//called from update loop
         //
-        // Do a rect fit to the contour, and draw it on the screen
-        RotatedRect rotatedRectFitToContour = Imgproc.minAreaRect(contour2f);
-        drawRotatedRect(rotatedRectFitToContour, input);
-        //
-        // The angle OpenCV gives us can be ambiguous, so look at the shape of
-        // the rectangle to fix that.
-        double rotRectAngle = rotatedRectFitToContour.angle;
-        if (rotatedRectFitToContour.size.width < rotatedRectFitToContour.size.height) {
-            rotRectAngle += 90;
-        }
-        //
-        // Figure out the slope of a line which would run through the middle, lengthwise
-        // (Slope as in m from 'Y = mx + b')
-        double midlineSlope = Math.tan(Math.toRadians(rotRectAngle));
-        //
-        // We're going to split the this contour into two regions: one region for the points
-        // which fall above the midline, and one region for the points which fall below.
-        // We'll need a place to store the points as we split them, so we make ArrayLists
-        ArrayList<Point> aboveMidline = new ArrayList<>(points.length/2);
-        ArrayList<Point> belowMidline = new ArrayList<>(points.length/2);
-        //
-        // Ok, now actually split the contour into those two regions we discussed earlier!
-        for(Point p : points)
-        {
-            if(rotatedRectFitToContour.center.y - p.y > midlineSlope * (rotatedRectFitToContour.center.x - p.x))
-            {
-                aboveMidline.add(p);
+        AnalyzedStone analyzedStone = new AnalyzedStone();
+        analyzedStone.area = Imgproc.contourArea(contour);
+        int position = 0;
+        for(AnalyzedStone analStone : internalStoneList){//find position based on area (scored by biggest)
+            if(analStone.area < analyzedStone.area){
+                break;
             }
-            else
-            {
-                belowMidline.add(p);
-            }
+            position++;
         }
-
-        // Now that we've split the contour into those two regions, we analyze each
-        // region independently.
-        StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis aboveMidlineMetrics = analyzeContourRegion(aboveMidline);
-        StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis belowMidlineMetrics = analyzeContourRegion(belowMidline);
-
-        if(aboveMidlineMetrics == null || belowMidlineMetrics == null)
-        {
-            return; // Get out of dodge
-        }
-
-        // We're going to draw line from the center of the bounding rect, to outside the bounding rect, in the
-        // direction of the side of the stone with the nubs.
-        Point displOfOrientationLinePoint2 = computeDisplacementForSecondPointOfStoneOrientationLine(rotatedRectFitToContour, rotRectAngle);
-
-        /*
-         * If the difference in the densities of the two regions exceeds the threshold,
-         * then we assume the stone is on its side. Otherwise, if the difference is inside
-         * of the threshold, we assume it's upright.
-         */
-        if(aboveMidlineMetrics.density < belowMidlineMetrics.density - DENSITY_UPRIGHT_THRESHOLD)
-        {
-            /*
-             * Assume the stone is on its side, with the top contour region being the
-             * one which contains the nubs
-             */
-
-            // Draw that line we were just talking about
-            Imgproc.line(
-                    input, // Buffer we're drawing on
-                    new Point( // First point of the line (center of bounding rect)
-                            rotatedRectFitToContour.center.x,
-                            rotatedRectFitToContour.center.y),
-                    new Point( // Second point of the line (center - displacement we calculated earlier)
-                            rotatedRectFitToContour.center.x-displOfOrientationLinePoint2.x,
-                            rotatedRectFitToContour.center.y-displOfOrientationLinePoint2.y),
-                    PURPLE, // Color we're drawing the line in
-                    2); // Thickness of the line we're drawing
-
-            // We outline the contour region that we assumed to be the side with the nubs
-            Imgproc.drawContours(input, aboveMidlineMetrics.listHolderOfMatOfPoint, -1, TEAL, 2, 8);
-
-            // Compute the absolute angle of the stone
-            double angle = -(rotRectAngle-90);
-
-            // "Tag" the stone with text stating its absolute angle
-            drawTagText(rotatedRectFitToContour, Integer.toString((int) Math.round(angle))+" deg", input);
-
-            StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone analyzedStone = new StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone();
-            analyzedStone.angle = angle;
-            analyzedStone.orientation = StoneOrientationExample.StoneOrientationAnalysisPipeline.StoneOrientation.NOT_UPRIGHT;
-            internalStoneList.add(analyzedStone);
-        }
-        else if(belowMidlineMetrics.density < aboveMidlineMetrics.density - DENSITY_UPRIGHT_THRESHOLD)
-        {
-            /*
-             * Assume the stone is on its side, with the bottom contour region being the
-             * one which contains the nubs
-             */
-
-            // Draw that line we were just talking about
-            Imgproc.line(
-                    input, // Buffer we're drawing on
-                    new Point( // First point of the line (center + displacement we calculated earlier)
-                            rotatedRectFitToContour.center.x+displOfOrientationLinePoint2.x,
-                            rotatedRectFitToContour.center.y+displOfOrientationLinePoint2.y),
-                    new Point( // Second point of the line (center of bounding rect)
-                            rotatedRectFitToContour.center.x,
-                            rotatedRectFitToContour.center.y),
-                    PURPLE, // Color we're drawing the line in
-                    2); // Thickness of the line we're drawing
-
-            // We outline the contour region that we assumed to be the side with the nubs
-            Imgproc.drawContours(input, belowMidlineMetrics.listHolderOfMatOfPoint, -1, TEAL, 2, 8);
-
-            // Compute the absolute angle of the stone
-            double angle = -(rotRectAngle-270);
-
-            // "Tag" the stone with text stating its absolute angle
-            drawTagText(rotatedRectFitToContour,  Integer.toString((int) Math.round(angle))+" deg", input);
-
-            StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone analyzedStone = new StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone();
-            analyzedStone.angle = angle;
-            analyzedStone.orientation = StoneOrientationExample.StoneOrientationAnalysisPipeline.StoneOrientation.NOT_UPRIGHT;
-            internalStoneList.add(analyzedStone);
-        }
-        else
-        {
-            /*
-             * Assume the stone is upright
-             */
-
-            drawTagText(rotatedRectFitToContour, "UPRIGHT", input);
-
-            StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone analyzedStone = new StoneOrientationExample.StoneOrientationAnalysisPipeline.AnalyzedStone();
-            analyzedStone.angle = rotRectAngle;
-            analyzedStone.orientation = StoneOrientationExample.StoneOrientationAnalysisPipeline.StoneOrientation.UPRIGHT;
-            internalStoneList.add(analyzedStone);
-        }
+        analyzedStone.position = position;
+        Rect bound = Imgproc.boundingRect(contour);
+        analyzedStone.bound = bound;
+        analyzedStone.height = bound.height;
+        analyzedStone.width = bound.width;
+        internalStoneList.add(position, analyzedStone);//add by area position
     }
 
-    static class ContourRegionAnalysis
-    {
+    static class ContourRegionAnalysis {
         /*
          * This class holds the results of analyzeContourRegion()
          */
-
+        //
         double hullArea;
         double contourArea;
         double density;
         List<MatOfPoint> listHolderOfMatOfPoint;
     }
-
-    static StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints)
-    {
+    //
+    static ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints) {
         // drawContours() requires a LIST of contours (there's no singular drawContour()
         // method), so we have to make a list, even though we're only going to use a single
         // position in it...
@@ -354,7 +235,7 @@ public class RingPipeline extends OpenCvPipeline {
                 hullPoints[i] = contourPoints.get(hullContourIdxList.get(i));
             }
 
-            StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis analysis = new StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis();
+            ContourRegionAnalysis analysis = new ContourRegionAnalysis();
             analysis.listHolderOfMatOfPoint = listHolderOfMatOfPoint;
 
             // Compute the hull area
@@ -374,9 +255,8 @@ public class RingPipeline extends OpenCvPipeline {
             return null;
         }
     }
-
-    static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle)
-    {
+    //
+    static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle) {
         // Note: we return a point, but really it's not a point in space, we're
         // simply using it to hold X & Y displacement values from the middle point
         // of the bounding rect.
@@ -395,9 +275,8 @@ public class RingPipeline extends OpenCvPipeline {
 
         return point;
     }
-
-    static void drawTagText(RotatedRect rect, String text, Mat mat)
-    {
+    //
+    static void drawTagText(RotatedRect rect, String text, Mat mat) {
         Imgproc.putText(
                 mat, // The buffer we're drawing on
                 text, // The text we're drawing
@@ -408,20 +287,5 @@ public class RingPipeline extends OpenCvPipeline {
                 1, // Font size
                 TEAL, // Font color
                 1); // Font thickness
-    }
-
-    static void drawRotatedRect(RotatedRect rect, Mat drawOn)
-    {
-        /*
-         * Draws a rotated rect by drawing each of the 4 lines individually
-         */
-
-        Point[] points = new Point[4];
-        rect.points(points);
-
-        for(int i = 0; i < 4; ++i)
-        {
-            Imgproc.line(drawOn, points[i], points[(i+1)%4], RED, 2);
-        }
     }
 }
