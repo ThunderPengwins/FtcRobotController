@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.ultimate;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
@@ -44,6 +45,8 @@ public abstract class jeremy extends LinearOpMode {
     DcMotor intake;
     DcMotor launcher;
     //
+    CRServo feed;
+    //
     BNO055IMU imu;
     Orientation angles;
     Acceleration gravity;
@@ -51,6 +54,10 @@ public abstract class jeremy extends LinearOpMode {
     OpenCvCamera webcam;
     StoneOrientationAnalysisPipeline pipeline;
     RingPipeline ringPipe;
+    //
+    public static Boolean cvReady = false;
+    Integer widthThresh = 30;
+    Integer heightThresh = 30;
     //
     Double loctarang;//local
     Double glotarang;
@@ -67,6 +74,24 @@ public abstract class jeremy extends LinearOpMode {
     //
     Double turnSpeed = 15.0;//degrees second at full power
     //
+    //<editor-fold desc="Var for Extr Functions">
+    Boolean aPressed = false;
+    Boolean bPressed = false;
+    Boolean yPressed = false;
+    Double intakePower = 1.0;
+    Boolean feedRunning = false;
+    Long stopTime = 0L;
+    //
+    Boolean stopPending = false;
+    Boolean intakeRunning = false;
+    Boolean arrowPressed = false;
+    //
+    Double launcherPower = 0.0;
+    //
+    Long feedStartTime = 0L;
+    Long timeDif = 0L;
+    //</editor-fold>
+    //
     //<editor-fold desc="Odometry">
     Integer ocpr = 28;
     Double odia = 1.45;//diameter of odometry wheels in inches
@@ -81,14 +106,14 @@ public abstract class jeremy extends LinearOpMode {
     //
     //<editor-fold desc="Init Functions">
     public void Init(){
-        //chassisHardware();
+        chassisHardware();
         motorHardware();
         sensorHardware();
         //
-        //resetEncoders();
-        //motorsWithEncoders();
+        resetEncoders();
+        motorsWithEncoders();
         //
-        //setMotorReversals();
+        setMotorReversals();
         //
         initGyro();
         initOpen();
@@ -121,9 +146,11 @@ public abstract class jeremy extends LinearOpMode {
     public void motorHardware(){
         intake = hardwareMap.dcMotor.get("intake");
         launcher = hardwareMap.dcMotor.get("launcher");
+        feed = hardwareMap.crservo.get("feed");
         //
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        feed.setDirection(DcMotorSimple.Direction.REVERSE);
     }
     //
     public void sensorHardware(){
@@ -182,6 +209,12 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public void initOpen(){
+        //
+        cvReady = false;
+        //
+        telemetry.addData("OpenCV", "initilaizing");
+        telemetry.update();
+        //
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "webcam"), cameraMonitorViewId);
         //
@@ -198,6 +231,15 @@ public abstract class jeremy extends LinearOpMode {
         //
         // Tell telemetry to update faster than the default 250ms period :)
         telemetry.setMsTransmissionInterval(20);
+        //
+        while(!cvReady){
+            telemetry.addData("cvready", cvReady);
+            telemetry.update();
+        }
+        //
+        telemetry.addData("OpenCV", "ready");
+        telemetry.update();
+        //
     }
     //
     public void initOpenStone(){
@@ -397,6 +439,70 @@ public abstract class jeremy extends LinearOpMode {
         frontLeft.setPower(0);
         backLeft.setPower(0);
         backRight.setPower(0);
+    }
+    //</editor-fold>
+    //
+    //<editor-fold desc="TeleOp Functions">
+    public void runIntake(){
+        if(gamepad1.a && !aPressed){
+            aPressed = true;
+            intakeRunning = !intakeRunning;
+            if(intakeRunning){
+                intake.setPower(intakePower);
+            }else{
+                intake.setPower(0.0);
+            }
+        }else if(!gamepad1.a && aPressed){
+            aPressed = false;
+        }
+        //
+        if(gamepad1.y && !yPressed){
+            yPressed = true;
+            intakePower = -intakePower;
+            if(intakeRunning){
+                intake.setPower(intakePower);
+            }
+        }else if(!gamepad1.y && yPressed){
+            yPressed = false;
+        }
+    }
+    //
+    public void runLauncherIncr(){
+        if((gamepad1.dpad_up || gamepad1.dpad_down) && !arrowPressed){
+            arrowPressed = true;
+            if(gamepad1.dpad_up && launcherPower < 1){
+                launcherPower += .05;
+            }else if(launcherPower > 0){
+                launcherPower -= .05;
+            }
+            launcher.setPower(launcherPower);
+        }else if(!gamepad1.dpad_up && !gamepad1.dpad_down && arrowPressed){
+            arrowPressed = false;
+        }
+    }
+    //
+    public void runFeed(){
+        if(gamepad1.b && !bPressed && !feedRunning){
+            feedStartTime = System.currentTimeMillis();
+            //
+            feedRunning = true;
+            bPressed = true;
+            //
+            feed.setPower(1.0);
+        }else if(gamepad1.b && !bPressed && feedRunning && !stopPending){
+            stopPending = true;
+            bPressed = true;
+            timeDif = (System.currentTimeMillis() - feedStartTime) / 1000;
+            stopTime = Math.round(1000 * Math.ceil(timeDif)) + feedStartTime;
+        }else if(feedRunning && stopPending && System.currentTimeMillis() > stopTime){
+            feedRunning = false;
+            stopPending = false;
+            bPressed = true;
+            //
+            feed.setPower(0);
+        }else if(!gamepad1.b && bPressed){
+            bPressed = false;
+        }
     }
     //</editor-fold>
     //

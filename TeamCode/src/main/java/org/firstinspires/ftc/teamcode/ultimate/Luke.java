@@ -25,7 +25,7 @@ public class Luke extends jeremy {
     //
     public void runOpMode() {
         //
-        InitLite();
+        Init();
         //
         //backRight.setDirection(DcMotorSimple.Direction.FORWARD);
         //
@@ -58,6 +58,17 @@ public class Luke extends jeremy {
                 //
             }
             //
+            runIntake();
+            //
+            runFeed();
+            //
+            runLauncherIncr();
+            //
+            telemetry.addData("Feed running", feedRunning);
+            telemetry.addData("Stop pending", stopPending);
+            telemetry.addData("Stop time", stopTime);
+            telemetry.addData("Launcher power", Math.round(100 * launcherPower) + "%");
+            telemetry.addData("Intake running", intakeRunning);
             telemetry.update();
         }
         //
