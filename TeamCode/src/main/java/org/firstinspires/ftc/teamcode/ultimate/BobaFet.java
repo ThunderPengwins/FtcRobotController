@@ -23,7 +23,7 @@ public class BobaFet extends jeremy {
             telemetry.addData("Stop pending", stopPending);
             telemetry.addData("Stop time", stopTime);
             telemetry.addData("Current time", System.currentTimeMillis());
-            telemetry.addData("Time difference", Math.round(1000 * Math.ceil(timeDif)));
+            telemetry.addData("Time difference", Math.round(1000 * Math.ceil((System.currentTimeMillis() - feedStartTime) / 1000)));
             telemetry.addData("Launcher power", Math.round(100 * launcherPower) + "%");
             telemetry.addData("Intake running", intakeRunning);
             telemetry.addData("Intake power", intakePower);

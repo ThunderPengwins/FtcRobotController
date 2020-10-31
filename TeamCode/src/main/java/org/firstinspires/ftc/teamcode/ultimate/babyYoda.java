@@ -8,7 +8,6 @@ import java.util.ArrayList;
 public class babyYoda extends jeremy{
     //
     boolean aPressed = false;
-    RingPipeline.AnalyzedRingGr bestRing = new RingPipeline.AnalyzedRingGr();
     ArrayList<RingPipeline.AnalyzedRingGr> ringListSnap = new ArrayList<>();
     //
     public void runOpMode(){

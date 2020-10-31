@@ -3,7 +3,7 @@ package org.firstinspires.ftc.teamcode.ultimate;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Luke", group = "test")
+@TeleOp(name = "Luke", group = "working")
 public class Luke extends jeremy {
     //
     double powerFactor = 1.0;
@@ -51,11 +51,20 @@ public class Luke extends jeremy {
                 //ayaw = getAngle();
                 //setLight("red");
                 //
+            }else if(rightx != 0) {
+                //
+                babyTurn(rightx, powerFactor);
+                //
             }else{//moving
                 //
                 telemetry.addData("Moving", "planetary");
-                globalMeccMove(leftx, lefty, rightx, powerFactor, 0.5, horiFactor, origin);
+                //globalMeccMove(leftx, lefty, rightx, powerFactor, 0.5, horiFactor, origin);
+                babyMeccMove(leftx, lefty, powerFactor);
                 //
+            }
+            //
+            if(gamepad1.left_trigger > 0){
+                turnToAngle(-8, .3);
             }
             //
             runIntake();

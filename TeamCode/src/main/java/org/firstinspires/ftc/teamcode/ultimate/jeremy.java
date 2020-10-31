@@ -58,6 +58,7 @@ public abstract class jeremy extends LinearOpMode {
     public static Boolean cvReady = false;
     Integer widthThresh = 30;
     Integer heightThresh = 30;
+    RingPipeline.AnalyzedRingGr bestRing = new RingPipeline.AnalyzedRingGr();
     //
     Double loctarang;//local
     Double glotarang;
@@ -65,10 +66,10 @@ public abstract class jeremy extends LinearOpMode {
     DistanceSensor test;
     //
     Integer cpr = 28; //counts per rotation
-    double gearratio = 40;
+    double gearratio = 139;
     Double diameter = 4.125;
     Double cpi = (cpr * gearratio)/(Math.PI * diameter); //counts per inch, 28cpr * gear ratio / (2 * pi * diameter (in inches, in the center))
-    Double bias = 0.8;//0.714
+    Double bias = 0.14;//0.714
     //
     Double conversion = cpi * bias;
     //
@@ -86,7 +87,9 @@ public abstract class jeremy extends LinearOpMode {
     Boolean intakeRunning = false;
     Boolean arrowPressed = false;
     //
-    Double launcherPower = 0.0;
+    Double launcherPower = 0.95;
+    Boolean laucherToggle = false;
+    Boolean togglePressed = false;
     //
     Long feedStartTime = 0L;
     Long timeDif = 0L;
@@ -103,6 +106,8 @@ public abstract class jeremy extends LinearOpMode {
     Double oxOffset = 5.5;//positive is number of inches right from center
     Double oyOffset = -6.25;//positive is number of inches forward from center
     //</editor-fold>
+    //
+    Boolean opModeStarted;
     //
     //<editor-fold desc="Init Functions">
     public void Init(){
@@ -425,6 +430,27 @@ public abstract class jeremy extends LinearOpMode {
         //
     }
     //
+    public void babyMeccMove(double x, double y, double Gfac){
+        if(Math.abs(x) > Math.abs(y)){
+            frontLeft.setPower(x * Gfac);
+            frontRight.setPower(x * -Gfac);
+            backLeft.setPower(x * -Gfac);
+            backRight.setPower(x * Gfac);
+        }else{
+            frontLeft.setPower(y * Gfac);
+            frontRight.setPower(y * Gfac);
+            backLeft.setPower(y * Gfac);
+            backRight.setPower(y * Gfac);
+        }
+    }
+    //
+    public void babyTurn(double t, double Gfac){
+        frontLeft.setPower(t * Gfac);
+        frontRight.setPower(t * -Gfac);
+        backLeft.setPower(t * Gfac);
+        backRight.setPower(t * -Gfac);
+    }
+    //
     public void turnWithEncoder(double input){
         motorsWithEncoders();
         //
@@ -475,10 +501,25 @@ public abstract class jeremy extends LinearOpMode {
             }else if(launcherPower > 0){
                 launcherPower -= .05;
             }
-            launcher.setPower(launcherPower);
+            if(laucherToggle) {
+                launcher.setPower(launcherPower);
+            }
         }else if(!gamepad1.dpad_up && !gamepad1.dpad_down && arrowPressed){
             arrowPressed = false;
         }
+        //
+        if(gamepad1.left_bumper && !togglePressed){
+            laucherToggle = !laucherToggle;
+            if(laucherToggle){
+                launcher.setPower(launcherPower);
+            }else{
+                launcher.setPower(0);
+            }
+            togglePressed = true;
+        }else if(!gamepad1.left_bumper && togglePressed){
+            togglePressed = false;
+        }
+        //
     }
     //
     public void runFeed(){
@@ -492,8 +533,8 @@ public abstract class jeremy extends LinearOpMode {
         }else if(gamepad1.b && !bPressed && feedRunning && !stopPending){
             stopPending = true;
             bPressed = true;
-            timeDif = (System.currentTimeMillis() - feedStartTime) / 1000;
-            stopTime = Math.round(1000 * Math.ceil(timeDif)) + feedStartTime;
+            timeDif = Math.round(1000 * Math.ceil((System.currentTimeMillis() - feedStartTime) / 1000));
+            stopTime = feedStartTime + timeDif + 1400;
         }else if(feedRunning && stopPending && System.currentTimeMillis() > stopTime){
             feedRunning = false;
             stopPending = false;
@@ -504,6 +545,7 @@ public abstract class jeremy extends LinearOpMode {
             bPressed = false;
         }
     }
+    //
     //</editor-fold>
     //
     //<editor-fold desc="Autonomous">
@@ -524,6 +566,38 @@ public abstract class jeremy extends LinearOpMode {
         backRight.setPower(speed);
         //
         while (frontLeft.isBusy() && frontRight.isBusy() && backLeft.isBusy() && backRight.isBusy() && opModeIsActive()){}
+        still();
+        return;
+    }
+    //
+    public void wiggleToPosition(boolean left, double inches, double speed){
+        //
+        int move = (int)(Math.round(inches*conversion));
+        //
+        if(left) {
+            backLeft.setTargetPosition(backLeft.getCurrentPosition() + move);
+            frontLeft.setTargetPosition(frontLeft.getCurrentPosition() + move);
+            //
+            motorsToPosition();
+            //
+            frontLeft.setPower(speed);
+            backLeft.setPower(speed);
+            //
+            while (frontLeft.isBusy() && backLeft.isBusy() && opModeIsActive()){}
+            //
+        }else{
+            backRight.setTargetPosition(backRight.getCurrentPosition() + move);
+            frontRight.setTargetPosition(frontRight.getCurrentPosition() + move);
+            //
+            motorsToPosition();
+            //
+            frontRight.setPower(speed);
+            backRight.setPower(speed);
+            //
+            while (frontRight.isBusy() && backRight.isBusy() && opModeIsActive()){}
+            //
+        }
+        //
         still();
         return;
     }
@@ -1158,8 +1232,7 @@ public abstract class jeremy extends LinearOpMode {
             }
         }
 
-        static class ContourRegionAnalysis
-        {
+        static class ContourRegionAnalysis {
             /*
              * This class holds the results of analyzeContourRegion()
              */
@@ -1170,8 +1243,7 @@ public abstract class jeremy extends LinearOpMode {
             List<MatOfPoint> listHolderOfMatOfPoint;
         }
 
-        static StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints)
-        {
+        static StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints) {
             // drawContours() requires a LIST of contours (there's no singular drawContour()
             // method), so we have to make a list, even though we're only going to use a single
             // position in it...
@@ -1270,8 +1342,22 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
-    public void updateOpenCV(){
-        //hi
+    public int getRings(){
+        bestRing = ringPipe.getBestRing();
+        //
+        if(bestRing != null){
+            if (bestRing.width > widthThresh) {
+                if (bestRing.height > heightThresh) {
+                    return 4;
+                } else {
+                    return 1;
+                }
+            } else {
+                return 0;
+            }
+        }else{
+            return 0;
+        }
     }
     //</editor-fold>
     //
