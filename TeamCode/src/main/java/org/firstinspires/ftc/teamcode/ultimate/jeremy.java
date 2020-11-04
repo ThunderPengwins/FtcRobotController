@@ -6,7 +6,10 @@ import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.DistanceSensor;
+import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.configuration.typecontainers.MotorConfigurationType;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.CameraName;
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -44,8 +47,12 @@ public abstract class jeremy extends LinearOpMode {
     //
     DcMotor intake;
     DcMotor launcher;
+    DcMotor wobble;
     //
     CRServo feed;
+    Servo keeper;
+    //
+    DigitalChannel wobbleUp;
     //
     BNO055IMU imu;
     Orientation angles;
@@ -79,9 +86,11 @@ public abstract class jeremy extends LinearOpMode {
     Boolean aPressed = false;
     Boolean bPressed = false;
     Boolean yPressed = false;
+    Boolean xPressed = false;
     Double intakePower = 1.0;
     Boolean feedRunning = false;
     Long stopTime = 0L;
+    Boolean keepClosed = true;
     //
     Boolean stopPending = false;
     Boolean intakeRunning = false;
@@ -151,14 +160,23 @@ public abstract class jeremy extends LinearOpMode {
     public void motorHardware(){
         intake = hardwareMap.dcMotor.get("intake");
         launcher = hardwareMap.dcMotor.get("launcher");
+        wobble = hardwareMap.dcMotor.get("wobble");
+        //
         feed = hardwareMap.crservo.get("feed");
+        keeper = hardwareMap.servo.get("keeper");
         //
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         feed.setDirection(DcMotorSimple.Direction.REVERSE);
+        //
+        MotorConfigurationType motorConfigurationType = launcher.getMotorType().clone();
+        motorConfigurationType.setAchieveableMaxRPMFraction(1.0);
+        launcher.setMotorType(motorConfigurationType);
+        //
+        launcher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
     }
     //
     public void sensorHardware(){
+        wobbleUp = hardwareMap.get(DigitalChannel.class, "wobbleUp");
         //test = hardwareMap.get(DistanceSensor.class, "test");
     }
     //
@@ -469,8 +487,8 @@ public abstract class jeremy extends LinearOpMode {
     //</editor-fold>
     //
     //<editor-fold desc="TeleOp Functions">
-    public void runIntake(){
-        if(gamepad1.a && !aPressed){
+    public void runIntake(boolean aButton, boolean yButton){
+        if(aButton && !aPressed){
             aPressed = true;
             intakeRunning = !intakeRunning;
             if(intakeRunning){
@@ -478,25 +496,25 @@ public abstract class jeremy extends LinearOpMode {
             }else{
                 intake.setPower(0.0);
             }
-        }else if(!gamepad1.a && aPressed){
+        }else if(aButton && aPressed){
             aPressed = false;
         }
         //
-        if(gamepad1.y && !yPressed){
+        if(yButton && !yPressed){
             yPressed = true;
             intakePower = -intakePower;
             if(intakeRunning){
                 intake.setPower(intakePower);
             }
-        }else if(!gamepad1.y && yPressed){
+        }else if(yButton && yPressed){
             yPressed = false;
         }
     }
     //
-    public void runLauncherIncr(){
-        if((gamepad1.dpad_up || gamepad1.dpad_down) && !arrowPressed){
+    public void runLauncherIncr(boolean dUp, boolean dDown, boolean bumberButton){
+        if((dUp || dDown) && !arrowPressed){
             arrowPressed = true;
-            if(gamepad1.dpad_up && launcherPower < 1){
+            if(dUp && launcherPower < 1){
                 launcherPower += .05;
             }else if(launcherPower > 0){
                 launcherPower -= .05;
@@ -504,11 +522,11 @@ public abstract class jeremy extends LinearOpMode {
             if(laucherToggle) {
                 launcher.setPower(launcherPower);
             }
-        }else if(!gamepad1.dpad_up && !gamepad1.dpad_down && arrowPressed){
+        }else if(!dUp && !dDown && arrowPressed){
             arrowPressed = false;
         }
         //
-        if(gamepad1.left_bumper && !togglePressed){
+        if(bumberButton && !togglePressed){
             laucherToggle = !laucherToggle;
             if(laucherToggle){
                 launcher.setPower(launcherPower);
@@ -516,21 +534,21 @@ public abstract class jeremy extends LinearOpMode {
                 launcher.setPower(0);
             }
             togglePressed = true;
-        }else if(!gamepad1.left_bumper && togglePressed){
+        }else if(!bumberButton && togglePressed){
             togglePressed = false;
         }
         //
     }
     //
-    public void runFeed(){
-        if(gamepad1.b && !bPressed && !feedRunning){
+    public void runFeed(boolean bButton){
+        if(bButton && !bPressed && !feedRunning){
             feedStartTime = System.currentTimeMillis();
             //
             feedRunning = true;
             bPressed = true;
             //
             feed.setPower(1.0);
-        }else if(gamepad1.b && !bPressed && feedRunning && !stopPending){
+        }else if(bButton && !bPressed && feedRunning && !stopPending){
             stopPending = true;
             bPressed = true;
             timeDif = Math.round(1000 * Math.ceil((System.currentTimeMillis() - feedStartTime) / 1000));
@@ -541,8 +559,32 @@ public abstract class jeremy extends LinearOpMode {
             bPressed = true;
             //
             feed.setPower(0);
-        }else if(!gamepad1.b && bPressed){
+        }else if(bButton && bPressed){
             bPressed = false;
+        }
+    }
+    //
+    public void runWobble(float leftTrigger, float rightTrigger){
+        if(rightTrigger > 0) {
+            wobble.setPower(rightTrigger * .4);
+        }else if(!wobbleUp.getState()){
+            wobble.setPower(-leftTrigger * .4);
+        }else if(wobbleUp.getState()){
+            wobble.setPower(0);
+        }
+    }
+    //
+    public void keepEmDead(boolean xButton){
+        if(xButton && !xPressed){
+            if(keepClosed){
+                keeper.setPosition(0.3);//set open
+            }else{
+                keeper.setPosition(0.0);//set closed
+            }
+            keepClosed = !keepClosed;
+            xPressed = true;
+        }else if(!xButton && xPressed){
+            xPressed = false;
         }
     }
     //

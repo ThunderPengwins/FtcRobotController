@@ -5,6 +5,13 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 @TeleOp(name = "Boba Fet", group = "test")
 public class BobaFet extends jeremy {
     //
+    boolean aButton;
+    boolean bButton;
+    boolean yButton;
+    boolean dUp;
+    boolean dDown;
+    boolean bumber;
+    //
     public void runOpMode() throws InterruptedException {
         //
         Init();
@@ -13,11 +20,18 @@ public class BobaFet extends jeremy {
         //
         while(opModeIsActive()){
             //
-            runIntake();
+            aButton = gamepad1.a;
+            bButton = gamepad1.b;
+            yButton = gamepad1.y;
+            dUp = gamepad1.dpad_up;
+            dDown = gamepad1.dpad_down;
+            bumber = gamepad1.left_bumper;
             //
-            runFeed();
+            runIntake(aButton, yButton);
             //
-            runLauncherIncr();
+            runFeed(bButton);
+            //
+            runLauncherIncr(dUp,dDown,bumber);
             //
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Stop pending", stopPending);

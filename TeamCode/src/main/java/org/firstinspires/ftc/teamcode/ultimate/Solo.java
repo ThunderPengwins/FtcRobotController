@@ -11,8 +11,6 @@ public class Solo extends jeremy{
         //
         waitForStartify();
         //
-        //motorsToPosition();
-        //
         int ringNum = getRings();
         telemetry.addData("Rings", ringNum);
         telemetry.update();

@@ -12,8 +12,15 @@ public class Luke extends jeremy {
     float leftx;
     float lefty;
     float rightx;
-    float otherlefty;
-    float otherrighty;
+    boolean aButton;
+    boolean bButton;
+    boolean yButton;
+    boolean xButton;
+    boolean dUp;
+    boolean dDown;
+    boolean bumber;
+    float leftTrigger;
+    float rightTrigger;
     //
     double ayaw = 0;
     //
@@ -41,8 +48,16 @@ public class Luke extends jeremy {
             leftx = gamepad1.left_stick_x;
             lefty = -gamepad1.left_stick_y;
             rightx = gamepad1.right_stick_x;
-            otherlefty = -gamepad2.left_stick_y;
-            otherrighty = -gamepad2.right_stick_y;
+            //
+            aButton = gamepad1.a;
+            bButton = gamepad2.b;
+            yButton = gamepad1.y;
+            xButton = gamepad2.x;
+            dUp = gamepad2.dpad_up;
+            dDown = gamepad2.dpad_down;
+            bumber = gamepad2.left_bumper;
+            leftTrigger = gamepad2.left_trigger;
+            rightTrigger = gamepad2.right_trigger;
             //
             if(leftx == 0 && lefty == 0 && rightx == 0){//no motion
                 //
@@ -67,17 +82,23 @@ public class Luke extends jeremy {
                 turnToAngle(-8, .3);
             }
             //
-            runIntake();
+            runIntake(aButton,yButton);
             //
-            runFeed();
+            runFeed(bButton);
             //
-            runLauncherIncr();
+            runLauncherIncr(dUp,dDown,bumber);
+            //
+            runWobble(leftTrigger, rightTrigger);
+            //
+            keepEmDead(xButton);
             //
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Stop pending", stopPending);
             telemetry.addData("Stop time", stopTime);
             telemetry.addData("Launcher power", Math.round(100 * launcherPower) + "%");
             telemetry.addData("Intake running", intakeRunning);
+            telemetry.addData("Wobble up", wobbleUp.getState());
+            telemetry.addData("Keeper position", keeper.getPosition());
             telemetry.update();
         }
         //
