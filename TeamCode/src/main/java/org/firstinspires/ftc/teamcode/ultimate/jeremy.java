@@ -577,7 +577,7 @@ public abstract class jeremy extends LinearOpMode {
     public void keepEmDead(boolean xButton){
         if(xButton && !xPressed){
             if(keepClosed){
-                keeper.setPosition(0.3);//set open
+                keeper.setPosition(0.5);//set open
             }else{
                 keeper.setPosition(0.0);//set closed
             }
@@ -1273,7 +1273,7 @@ public abstract class jeremy extends LinearOpMode {
                 internalStoneList.add(analyzedStone);
             }
         }
-
+        //
         static class ContourRegionAnalysis {
             /*
              * This class holds the results of analyzeContourRegion()
@@ -1284,7 +1284,7 @@ public abstract class jeremy extends LinearOpMode {
             double density;
             List<MatOfPoint> listHolderOfMatOfPoint;
         }
-
+        //
         static StoneOrientationExample.StoneOrientationAnalysisPipeline.ContourRegionAnalysis analyzeContourRegion(ArrayList<Point> contourPoints) {
             // drawContours() requires a LIST of contours (there's no singular drawContour()
             // method), so we have to make a list, even though we're only going to use a single
@@ -1332,9 +1332,8 @@ public abstract class jeremy extends LinearOpMode {
                 return null;
             }
         }
-
-        static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle)
-        {
+        //
+        static Point computeDisplacementForSecondPointOfStoneOrientationLine(RotatedRect rect, double unambiguousAngle) {
             // Note: we return a point, but really it's not a point in space, we're
             // simply using it to hold X & Y displacement values from the middle point
             // of the bounding rect.
@@ -1353,9 +1352,8 @@ public abstract class jeremy extends LinearOpMode {
 
             return point;
         }
-
-        static void drawTagText(RotatedRect rect, String text, Mat mat)
-        {
+        //
+        static void drawTagText(RotatedRect rect, String text, Mat mat) {
             Imgproc.putText(
                     mat, // The buffer we're drawing on
                     text, // The text we're drawing
@@ -1367,9 +1365,8 @@ public abstract class jeremy extends LinearOpMode {
                     TEAL, // Font color
                     1); // Font thickness
         }
-
-        static void drawRotatedRect(RotatedRect rect, Mat drawOn)
-        {
+        //
+        static void drawRotatedRect(RotatedRect rect, Mat drawOn) {
             /*
              * Draws a rotated rect by drawing each of the 4 lines individually
              */
