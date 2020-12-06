@@ -37,9 +37,9 @@ public class Solo extends jeremy{
         launcher.setPower(.95);
         sleep(2000);
         //
-        feed.setPower(1.0);
+        //feed.setPower(1.0);
         sleep(1400 * 4);
-        feed.setPower(0);
+        //feed.setPower(0);
         launcher.setPower(0);
         //
         if(ringNum == 0){

@@ -34,10 +34,10 @@ public class BobaFet extends jeremy {
             runLauncherIncr(dUp,dDown,bumber);
             //
             telemetry.addData("Feed running", feedRunning);
-            telemetry.addData("Stop pending", stopPending);
-            telemetry.addData("Stop time", stopTime);
+            telemetry.addData("Huh?", feedRunning && (System.currentTimeMillis() > feedStartTime + 1000));
+            telemetry.addData("Stop time", feedStartTime + 1000);
             telemetry.addData("Current time", System.currentTimeMillis());
-            telemetry.addData("Time difference", Math.round(1000 * Math.ceil((System.currentTimeMillis() - feedStartTime) / 1000)));
+            telemetry.addData("Time difference", Math.round(500 * Math.ceil((System.currentTimeMillis() - feedStartTime) / 500)));
             telemetry.addData("Launcher power", Math.round(100 * launcherPower) + "%");
             telemetry.addData("Intake running", intakeRunning);
             telemetry.addData("Intake power", intakePower);

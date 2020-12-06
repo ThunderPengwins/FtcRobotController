@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.ultimate;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
@@ -47,10 +46,17 @@ public abstract class jeremy extends LinearOpMode {
     //
     DcMotor intake;
     DcMotor launcher;
-    DcMotor wobble;
+    DcMotor wobble;//also X Encoder
     //
-    CRServo feed;
+    DcMotor YEncoder;
+    //
+    Servo feed;
     Servo keeper;
+    //
+    final static Double FEEDPULL = 1.0;
+    final static Double FEEDPUSH = 0.6;
+    final static Double KEEPERCLOSED = 0.0;
+    final static Double KEEPEROPEN = 0.5;
     //
     DigitalChannel wobbleUp;
     //
@@ -83,6 +89,10 @@ public abstract class jeremy extends LinearOpMode {
     Double turnSpeed = 15.0;//degrees second at full power
     //
     //<editor-fold desc="Var for Extr Functions">
+    float leftx;
+    float lefty;
+    float rightx;
+    //
     Boolean aPressed = false;
     Boolean bPressed = false;
     Boolean yPressed = false;
@@ -105,12 +115,12 @@ public abstract class jeremy extends LinearOpMode {
     //</editor-fold>
     //
     //<editor-fold desc="Odometry">
-    Integer ocpr = 28;
+    Integer ocpr = 720;
     Double odia = 1.45;//diameter of odometry wheels in inches
-    Double ocpi = cpr / (Math.PI * diameter);
-    Double obias = 1.0;
+    Double ocpi = ocpr / (Math.PI * odia);
+    Double obias = 1.85;
     //
-    Double oconv = ocpi * obias;
+    Double oconv = ocpi * obias;//odometry conversion
     //
     Double oxOffset = 5.5;//positive is number of inches right from center
     Double oyOffset = -6.25;//positive is number of inches forward from center
@@ -161,12 +171,14 @@ public abstract class jeremy extends LinearOpMode {
         intake = hardwareMap.dcMotor.get("intake");
         launcher = hardwareMap.dcMotor.get("launcher");
         wobble = hardwareMap.dcMotor.get("wobble");
+        YEncoder = hardwareMap.dcMotor.get("yencoder");
         //
-        feed = hardwareMap.crservo.get("feed");
+        feed = hardwareMap.servo.get("feed");
         keeper = hardwareMap.servo.get("keeper");
         //
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        feed.setDirection(DcMotorSimple.Direction.REVERSE);
+        //wobble.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        YEncoder.setDirection(DcMotorSimple.Direction.REVERSE);
         //
         MotorConfigurationType motorConfigurationType = launcher.getMotorType().clone();
         motorConfigurationType.setAchieveableMaxRPMFraction(1.0);
@@ -448,6 +460,30 @@ public abstract class jeremy extends LinearOpMode {
         //
     }
     //
+    public void fullBaby(double x, double y, double t, double turnFactor, double powerFactor){
+        if(x == 0 && y == 0 && t == 0){//no motion
+            //
+            still();
+            telemetry.addData("Motion","Still");
+            //
+        }else if(t != 0) {
+            //
+            if(x == 0 && y == 0){
+                babyTurn(t, powerFactor);
+            }else if(Math.abs(x) > Math.abs(y)){
+                babyMeccTurn(x, t, turnFactor, powerFactor);
+            }else{
+                babyMoveTurn(y, t, turnFactor, powerFactor);
+            }
+            //
+        }else{//moving
+            //
+            telemetry.addData("Moving", "regular");
+            babyMeccMove(x, y, powerFactor);
+            //
+        }
+    }
+    //
     public void babyMeccMove(double x, double y, double Gfac){
         if(Math.abs(x) > Math.abs(y)){
             frontLeft.setPower(x * Gfac);
@@ -467,6 +503,22 @@ public abstract class jeremy extends LinearOpMode {
         frontRight.setPower(t * -Gfac);
         backLeft.setPower(t * Gfac);
         backRight.setPower(t * -Gfac);
+    }
+    //
+    public void babyMoveTurn(double m, double t, double Tfac, double Gfac){
+        double leftPower = (t * Gfac * Tfac) + (m * Gfac * (1 - Tfac));
+        double rightPower = (-t * Gfac * Tfac) + (m * Gfac * (1 - Tfac));
+        frontLeft.setPower(leftPower);
+        frontRight.setPower(rightPower);
+        backLeft.setPower(leftPower);
+        backRight.setPower(rightPower);
+    }
+    //
+    public void babyMeccTurn(double m, double t, double Tfac, double Gfac){
+        frontLeft.setPower((t * Gfac * Tfac) + (m * Gfac * (1 - Tfac)));
+        frontRight.setPower((-t * Gfac * Tfac) + (-m * Gfac * (1 - Tfac)));
+        backLeft.setPower((t * Gfac * Tfac) + (-m * Gfac * (1 - Tfac)));
+        backRight.setPower((-t * Gfac * Tfac) + (m * Gfac * (1 - Tfac)));
     }
     //
     public void turnWithEncoder(double input){
@@ -496,7 +548,7 @@ public abstract class jeremy extends LinearOpMode {
             }else{
                 intake.setPower(0.0);
             }
-        }else if(aButton && aPressed){
+        }else if(!aButton && aPressed){
             aPressed = false;
         }
         //
@@ -506,7 +558,7 @@ public abstract class jeremy extends LinearOpMode {
             if(intakeRunning){
                 intake.setPower(intakePower);
             }
-        }else if(yButton && yPressed){
+        }else if(!yButton && yPressed){
             yPressed = false;
         }
     }
@@ -547,19 +599,12 @@ public abstract class jeremy extends LinearOpMode {
             feedRunning = true;
             bPressed = true;
             //
-            feed.setPower(1.0);
-        }else if(bButton && !bPressed && feedRunning && !stopPending){
-            stopPending = true;
-            bPressed = true;
-            timeDif = Math.round(1000 * Math.ceil((System.currentTimeMillis() - feedStartTime) / 1000));
-            stopTime = feedStartTime + timeDif + 1400;
-        }else if(feedRunning && stopPending && System.currentTimeMillis() > stopTime){
+            feed.setPosition(FEEDPUSH);
+        }else if(feedRunning && (System.currentTimeMillis() > feedStartTime + 900)){
             feedRunning = false;
-            stopPending = false;
-            bPressed = true;
-            //
-            feed.setPower(0);
-        }else if(bButton && bPressed){
+        }else if(feedRunning && System.currentTimeMillis() > feedStartTime + 400){
+            feed.setPosition(FEEDPULL);
+        }else if(!bButton && bPressed){
             bPressed = false;
         }
     }
@@ -1401,38 +1446,44 @@ public abstract class jeremy extends LinearOpMode {
     //</editor-fold>
     //
     //<editor-fold desc="Operations">
-    public double getXOdometry(double xWheel, double yWheel, double origin){
+    public double getXOdometry(double xWheel, double yWheel, double lastAngle, double origin){
         //
-        double cang = fixAngle(getAngle() - origin);
+        double[] storeOdo = getOdoData(xWheel, yWheel, lastAngle, origin);//calc hypotenuse and global angle
         //
-        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);
-        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, cang);
+        double total = storeOdo[0];//get hypotenuse/magnitude of offset
+        double aGlob = storeOdo[1];//get global angle
         //
-        double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude
-        double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle
-        //
-        double aGlob = aLoc + cang;
-        //
-        return total * Math.cos(Math.toRadians(aGlob));
+        return total * Math.sin(Math.toRadians(aGlob));//return x
     }
     //
-    public double getYOdometry(double xWheel, double yWheel, double origin){
+    public double getYOdometry(double xWheel, double yWheel, double lastAngle, double origin){
         //
-        double cang = fixAngle(getAngle() - origin);
+        double[] storeOdo = getOdoData(xWheel, yWheel, lastAngle,origin);//calc hypotenuse and global angle
         //
-        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);
-        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, cang);
+        double total = storeOdo[0];//get hypotenuse/magnitude of offset
+        double aGlob = storeOdo[1];//get global angle
         //
-        double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude
-        double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle
+        return total * Math.cos(Math.toRadians(aGlob));//recalc y offset globally
+    }
+    //
+    public double[] getOdoData(double xWheel, double yWheel, double lastAngle, double origin){
+        double cang = fixAngle(getAngle() - lastAngle);//find change in angle
         //
-        double aGlob = aLoc + cang;
+        double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);//find x change in inches
+        double yLoc = (yWheel / oconv) + getTurnInches(oyOffset, cang);//find y change in inches
         //
-        return total * Math.sin(Math.toRadians(aGlob));
+        double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude of movement
+        double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle of movement
+        //
+        double aGlob = aLoc + cang;//adjust movement angle for global
+        //
+        double[] use = {total, aGlob};//package variables for function return
+        //
+        return use;
     }
     //
     public double getTurnInches(double offset, double angleChange){
-        return (angleChange / 360) * 2 * offset * Math.PI;
+        return (angleChange / 360) * 4 * offset * Math.PI;// * 2//return inches wheels move when turning
     }
     //
     public double getBPower(double theta1, double Hfac){

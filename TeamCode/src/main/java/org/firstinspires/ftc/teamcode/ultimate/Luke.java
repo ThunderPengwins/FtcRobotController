@@ -6,12 +6,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 @TeleOp(name = "Luke", group = "working")
 public class Luke extends jeremy {
     //
-    double powerFactor = 1.0;
     double horiFactor = 1.1;
     //
-    float leftx;
-    float lefty;
-    float rightx;
     boolean aButton;
     boolean bButton;
     boolean yButton;
@@ -23,10 +19,7 @@ public class Luke extends jeremy {
     float rightTrigger;
     //
     double ayaw = 0;
-    //
-    double mT = 0;
-    boolean ma = false;
-    double mr = 0;
+    boolean moveTurning = false;
     //
     double origin = 0;
     //
@@ -59,26 +52,9 @@ public class Luke extends jeremy {
             leftTrigger = gamepad2.left_trigger;
             rightTrigger = gamepad2.right_trigger;
             //
-            if(leftx == 0 && lefty == 0 && rightx == 0){//no motion
-                //
-                still();
-                telemetry.addData("Motion","Still");
-                //ayaw = getAngle();
-                //setLight("red");
-                //
-            }else if(rightx != 0) {
-                //
-                babyTurn(rightx, powerFactor);
-                //
-            }else{//moving
-                //
-                telemetry.addData("Moving", "planetary");
-                //globalMeccMove(leftx, lefty, rightx, powerFactor, 0.5, horiFactor, origin);
-                babyMeccMove(leftx, lefty, powerFactor);
-                //
-            }
+            fullBaby(leftx, lefty, rightx, 0.5, 1.0);//all chassis motion
             //
-            if(gamepad1.left_trigger > 0){
+            if(gamepad1.left_trigger > 0){//turn for launch
                 turnToAngle(-8, .3);
             }
             //
@@ -86,11 +62,11 @@ public class Luke extends jeremy {
             //
             runFeed(bButton);
             //
-            runLauncherIncr(dUp,dDown,bumber);
+            runLauncherIncr(dUp,dDown,bumber);//run launcher with arrows to increment by 5%
             //
             runWobble(leftTrigger, rightTrigger);
             //
-            keepEmDead(xButton);
+            keepEmDead(xButton);//run wobble servo
             //
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Stop pending", stopPending);
