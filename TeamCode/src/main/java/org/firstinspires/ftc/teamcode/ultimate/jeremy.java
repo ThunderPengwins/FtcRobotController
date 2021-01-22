@@ -148,6 +148,19 @@ public abstract class jeremy extends LinearOpMode {
         //
     }
     //
+    public void InitNoOpen(){
+        chassisHardware();
+        motorHardware();
+        sensorHardware();
+        //
+        resetEncoders();
+        motorsWithEncoders();
+        //
+        setMotorReversals();
+        //
+        initGyro();
+    }
+    //
     public void YodaInit(){
         //
         initGyro();

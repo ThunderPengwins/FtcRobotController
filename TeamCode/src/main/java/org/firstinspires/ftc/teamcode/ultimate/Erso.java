@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode.ultimate;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 @TeleOp(name = "Erso", group = "test")
@@ -9,9 +7,7 @@ public class Erso extends jeremy{
     //
     public void runOpMode(){
         //
-        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
-        //
-        Init();
+        InitNoOpen();
         //
         int startX = wobble.getCurrentPosition();
         int startY = YEncoder.getCurrentPosition();
@@ -53,17 +49,14 @@ public class Erso extends jeremy{
             //
             telemetry.addData("xPos", xPos);
             telemetry.addData("yPos", yPos);
-            //telemetry.addData("X change", getXOdometry(curX - lastX, curY - lastY, lastAngle, origin));
-            //telemetry.addData("Y change", getYOdometry(curX - lastX, curY - lastY, lastAngle, origin));
+            telemetry.addData("X change", getXOdometry(curX - lastX, curY - lastY, lastAngle, origin));
+            telemetry.addData("Y change", getYOdometry(curX - lastX, curY - lastY, lastAngle, origin));
             //telemetry.addData("X Encoder", curX);
             //telemetry.addData("Y Encoder", curY);
             telemetry.addData("Angle", fixAngle(getAngle() - origin));
             telemetry.addData("X Inch Input", (curX - startX) / oconv);
             telemetry.addData("Turn Inches", getTurnInches(oxOffset, fixAngle(getAngle() - origin)));
-            telemetry.addData("Y Inch Input", (curY - startY) / oconv);
-            telemetry.addData("Turn Inches", getTurnInches(oyOffset, fixAngle(getAngle() - origin)));
-            telemetry.addData("Total Change", getOdoData(curX - startX, curY - startY, origin, origin)[0]);
-            //telemetry.addData("X offset", ((curX - startX) / oconv) - getTurnInches(oxOffset, getTurnInches(oxOffset, fixAngle(getAngle() - origin))));
+            telemetry.addData("X offset", ((curX - startX) / oconv) - getTurnInches(oxOffset, getTurnInches(oxOffset, fixAngle(getAngle() - origin))));
             //telemetry.addData("Y offset", ((curY - startY) / oconv) - getTurnInches(oyOffset, getTurnInches(oyOffset, fixAngle(getAngle() - origin))));
             //telemetry.addData("Total displacement", getOdoData(curX - startX, curY - startY, origin)[0]);
             //telemetry.addData("Displacement angle", getOdoData(curX - startX, curY - startY, origin)[1]);
