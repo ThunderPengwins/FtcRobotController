@@ -119,11 +119,12 @@ public abstract class jeremy extends LinearOpMode {
     Double odia = 1.45;//diameter of odometry wheels in inches
     Double ocpi = ocpr / (Math.PI * odia);
     Double obias = 1.85;
+    Double tbias = 0.72876;
     //
     Double oconv = ocpi * obias;//odometry conversion
     //
     Double oxOffset = 5.5;//positive is number of inches right from center
-    Double oyOffset = -6.25;//positive is number of inches forward from center
+    Double oyOffset = -6.25 * 0.6842;//positive is number of inches forward from center, second number is y turn bias
     //</editor-fold>
     //
     Boolean opModeStarted;
@@ -141,6 +142,10 @@ public abstract class jeremy extends LinearOpMode {
         //
         initGyro();
         initOpen();
+        //
+        telemetry.addData("Initialization", "complete");
+        telemetry.update();
+        //
     }
     //
     public void YodaInit(){
@@ -271,9 +276,6 @@ public abstract class jeremy extends LinearOpMode {
             telemetry.addData("cvready", cvReady);
             telemetry.update();
         }
-        //
-        telemetry.addData("OpenCV", "ready");
-        telemetry.update();
         //
     }
     //
@@ -610,7 +612,7 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public void runWobble(float leftTrigger, float rightTrigger){
-        if(rightTrigger > 0) {
+        if(Math.abs(rightTrigger) > 0) {
             wobble.setPower(rightTrigger * .4);
         }else if(!wobbleUp.getState()){
             wobble.setPower(-leftTrigger * .4);
@@ -622,7 +624,7 @@ public abstract class jeremy extends LinearOpMode {
     public void keepEmDead(boolean xButton){
         if(xButton && !xPressed){
             if(keepClosed){
-                keeper.setPosition(0.5);//set open
+                keeper.setPosition(1.0);//set open
             }else{
                 keeper.setPosition(0.0);//set closed
             }
@@ -1453,7 +1455,11 @@ public abstract class jeremy extends LinearOpMode {
         double total = storeOdo[0];//get hypotenuse/magnitude of offset
         double aGlob = storeOdo[1];//get global angle
         //
-        return total * Math.sin(Math.toRadians(aGlob));//return x
+        if(xWheel == 0 && yWheel == 0){
+            return 0;//return zero if no change
+        }else {
+            return total * Math.sin(Math.toRadians(aGlob));//recalc x change globally
+        }
     }
     //
     public double getYOdometry(double xWheel, double yWheel, double lastAngle, double origin){
@@ -1463,27 +1469,33 @@ public abstract class jeremy extends LinearOpMode {
         double total = storeOdo[0];//get hypotenuse/magnitude of offset
         double aGlob = storeOdo[1];//get global angle
         //
-        return total * Math.cos(Math.toRadians(aGlob));//recalc y offset globally
+        if(xWheel == 0 && yWheel == 0){
+            return 0;//return zero if no change
+        }else {
+            return total * Math.cos(Math.toRadians(aGlob));//recalc y change globally
+        }
     }
     //
     public double[] getOdoData(double xWheel, double yWheel, double lastAngle, double origin){
         double cang = fixAngle(getAngle() - lastAngle);//find change in angle
+        double gRot = fixAngle(getAngle() - origin);
         //
         double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);//find x change in inches
-        double yLoc = (yWheel / oconv) + getTurnInches(oyOffset, cang);//find y change in inches
+        double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, cang);//find y change in inches
         //
         double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude of movement
         double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle of movement
         //
-        double aGlob = aLoc + cang;//adjust movement angle for global
+        double aGlob = aLoc + gRot;//adjust movement angle for global
         //
         double[] use = {total, aGlob};//package variables for function return
         //
         return use;
+
     }
     //
     public double getTurnInches(double offset, double angleChange){
-        return (angleChange / 360) * 4 * offset * Math.PI;// * 2//return inches wheels move when turning
+        return (angleChange / 360) * 4 * offset * Math.PI * tbias;// * 2//return inches wheels move when turning
     }
     //
     public double getBPower(double theta1, double Hfac){

@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.ultimate;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import java.util.ArrayList;
@@ -11,6 +13,8 @@ public class babyYoda extends jeremy{
     ArrayList<RingPipeline.AnalyzedRingGr> ringListSnap = new ArrayList<>();
     //
     public void runOpMode(){
+        //
+        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         //
         YodaInit();
         //

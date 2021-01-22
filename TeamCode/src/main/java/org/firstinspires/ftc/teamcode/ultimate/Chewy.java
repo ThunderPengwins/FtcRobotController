@@ -4,8 +4,8 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 
-@Autonomous(name = "Solo", group = "working")
-public class Solo extends jeremy{
+@Autonomous(name = "Chewy", group = "working")
+public class Chewy extends jeremy {
     //
     public void runOpMode(){
         //
@@ -40,7 +40,7 @@ public class Solo extends jeremy{
             moveToPosition(-42, .3);
         }
         //
-        launcher.setPower(.92);
+        launcher.setPower(.918);
         turnWithGyro(20, -.2);
         //
         sleep(1000);
@@ -53,11 +53,44 @@ public class Solo extends jeremy{
         }
         launcher.setPower(0);
         //
-        if(ringNum == 0){
+        wobble.setPower(-0.4);
+        keeper.setPosition(0);//set open
+        sleep(500);
+        wobble.setPower(0);
+        //
+        turnWithGyro(48, .3);
+        //
+        moveToPosition(-39, .3);
+        //
+        keeper.setPosition(1.0);//set closed
+        //
+        sleep(700);
+        //
+        wobble.setPower(.4);
+        while (!wobbleUp.getState() && opModeIsActive()){}
+        wobble.setPower(0);
+        //
+        turnWithGyro(180, .3);
+        moveToPosition(-40, .3);
+        //
+        wobble.setPower(-0.4);
+        sleep(500);
+        wobble.setPower(0);
+        //
+        keeper.setPosition(0);//set open
+        wobble.setPower(.4);
+        while (!wobbleUp.getState() && opModeIsActive()){}
+        wobble.setPower(0);
+        //
+        turnWithGyro(28, -.3);
+        strafeToPosition(15, .3);
+        moveToPosition(-15, .2);
+        //
+        /*if(ringNum == 0){
             strafeToPosition(-10, .3);
         }
         //
-        moveToPosition(15, .2);
+        moveToPosition(15, .2);*/
     }
     //
 }

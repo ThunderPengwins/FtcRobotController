@@ -1,9 +1,11 @@
 package org.firstinspires.ftc.teamcode.ultimate;
 
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-@TeleOp(name = "Luke", group = "working")
+@TeleOp(name = "Lukey", group = "working")
 public class Luke extends jeremy {
     //
     double horiFactor = 1.1;
@@ -24,6 +26,8 @@ public class Luke extends jeremy {
     double origin = 0;
     //
     public void runOpMode() {
+        //
+        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         //
         Init();
         //
@@ -64,7 +68,7 @@ public class Luke extends jeremy {
             //
             runLauncherIncr(dUp,dDown,bumber);//run launcher with arrows to increment by 5%
             //
-            runWobble(leftTrigger, rightTrigger);
+            runWobble(-leftTrigger, -rightTrigger);
             //
             keepEmDead(xButton);//run wobble servo
             //
