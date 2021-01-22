@@ -7,7 +7,7 @@ public class Erso extends jeremy{
     //
     public void runOpMode(){
         //
-        Init();
+        InitNoOpen();
         //
         int startX = wobble.getCurrentPosition();
         int startY = YEncoder.getCurrentPosition();
