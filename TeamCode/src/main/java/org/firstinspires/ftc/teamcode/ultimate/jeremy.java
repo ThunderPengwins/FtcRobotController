@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.ultimate;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
@@ -52,6 +53,7 @@ public abstract class jeremy extends LinearOpMode {
     //
     Servo feed;
     Servo keeper;
+    CRServo intakefeed;
     //
     final static Double FEEDPULL = 1.0;
     final static Double FEEDPUSH = 0.6;
@@ -97,13 +99,17 @@ public abstract class jeremy extends LinearOpMode {
     Boolean bPressed = false;
     Boolean yPressed = false;
     Boolean xPressed = false;
-    Double intakePower = 1.0;
+    Boolean dLeftPressed = false;
+    Boolean dUpPressed = false;
+    Double intakePower = -1.0;
+    Double intakeFeederPower = 1.0;
     Boolean feedRunning = false;
     Long stopTime = 0L;
     Boolean keepClosed = true;
     //
     Boolean stopPending = false;
     Boolean intakeRunning = false;
+    Boolean intakeFeederRunning = false;
     Boolean arrowPressed = false;
     //
     Double launcherPower = 0.95;
@@ -193,6 +199,7 @@ public abstract class jeremy extends LinearOpMode {
         //
         feed = hardwareMap.servo.get("feed");
         keeper = hardwareMap.servo.get("keeper");
+        intakefeed = hardwareMap.crservo.get("intakefeed");
         //
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
         //wobble.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -578,6 +585,30 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
+    public void runIntakeFeeder(boolean dLeft, boolean dUp){
+        if(dLeft && !dLeftPressed){
+            dLeftPressed = true;
+            intakeFeederRunning = !intakeFeederRunning;
+            if(intakeFeederRunning){
+                intakefeed.setPower(intakeFeederPower);
+            }else {
+                intakefeed.setPower(0);
+            }
+        }else if(!dLeft && dLeftPressed){
+            dLeftPressed = false;
+        }
+        //
+        if(dUp && !dUpPressed){
+            dUpPressed = true;
+            intakeFeederPower = -intakeFeederPower;
+            if(intakeFeederRunning){
+                intakefeed.setPower(intakeFeederPower);
+            }
+        }else if(!dUp && dUpPressed){
+            dUpPressed = false;
+        }
+    }
+    //
     public void runLauncherIncr(boolean dUp, boolean dDown, boolean bumberButton){
         if((dUp || dDown) && !arrowPressed){
             arrowPressed = true;
@@ -627,10 +658,10 @@ public abstract class jeremy extends LinearOpMode {
     public void runWobble(float leftTrigger, float rightTrigger){
         if(Math.abs(rightTrigger) > 0) {
             wobble.setPower(rightTrigger * .4);
-        }else if(!wobbleUp.getState()){
+        }else/* if(!wobbleUp.getState())*/{
             wobble.setPower(-leftTrigger * .4);
-        }else if(wobbleUp.getState()){
-            wobble.setPower(0);
+        /*}else if(wobbleUp.getState()){
+            wobble.setPower(0);*/
         }
     }
     //

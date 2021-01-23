@@ -17,6 +17,8 @@ public class Luke extends jeremy {
     boolean dUp;
     boolean dDown;
     boolean bumber;
+    boolean firstdLeft;
+    boolean firstdUp;
     float leftTrigger;
     float rightTrigger;
     //
@@ -53,6 +55,8 @@ public class Luke extends jeremy {
             dUp = gamepad2.dpad_up;
             dDown = gamepad2.dpad_down;
             bumber = gamepad2.left_bumper;
+            firstdLeft = gamepad1.dpad_left;//start and stop intake feeder
+            firstdUp = gamepad1.dpad_up;//reverse intake feeder direction
             leftTrigger = gamepad2.left_trigger;
             rightTrigger = gamepad2.right_trigger;
             //
@@ -63,6 +67,8 @@ public class Luke extends jeremy {
             }
             //
             runIntake(aButton,yButton);
+            //
+            runIntakeFeeder(firstdLeft, firstdUp);
             //
             runFeed(bButton);
             //
@@ -77,6 +83,8 @@ public class Luke extends jeremy {
             telemetry.addData("Stop time", stopTime);
             telemetry.addData("Launcher power", Math.round(100 * launcherPower) + "%");
             telemetry.addData("Intake running", intakeRunning);
+            telemetry.addData("Intakefeed running", intakeFeederRunning);
+            telemetry.addData("Intakefeed power", intakeFeederPower);
             telemetry.addData("Wobble up", wobbleUp.getState());
             telemetry.addData("Keeper position", keeper.getPosition());
             telemetry.update();

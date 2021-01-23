@@ -23,7 +23,9 @@ public class Chewy extends jeremy {
         telemetry.addData("Rings", ringNum);
         telemetry.update();
         if(ringNum == 0) {
+            intake.setPower(-1);
             moveToPosition(62, .3);
+            intake.setPower(0);
             //
             moveToPosition(-2, .3);
         }else if(ringNum == 1){
@@ -58,7 +60,7 @@ public class Chewy extends jeremy {
         sleep(500);
         wobble.setPower(0);
         //
-        turnWithGyro(48, .3);
+        turnWithGyro(55, .3);
         //
         moveToPosition(-39, .3);
         //
@@ -66,23 +68,27 @@ public class Chewy extends jeremy {
         //
         sleep(700);
         //
-        wobble.setPower(.4);
-        while (!wobbleUp.getState() && opModeIsActive()){}
-        wobble.setPower(0);
+        //wobble.setPower(1.0);
+        //while (!wobbleUp.getState() && opModeIsActive()){}
+        //sleep(900);
+        //wobble.setPower(0);
         //
-        turnWithGyro(180, .3);
+        turnWithGyro(190, .3);
         moveToPosition(-40, .3);
         //
-        wobble.setPower(-0.4);
+        /*wobble.setPower(-0.4);
         sleep(500);
-        wobble.setPower(0);
+        wobble.setPower(0);*/
         //
         keeper.setPosition(0);//set open
-        wobble.setPower(.4);
-        while (!wobbleUp.getState() && opModeIsActive()){}
-        wobble.setPower(0);
+        sleep(700);
+        /*wobble.setPower(1.0);
+        //while (!wobbleUp.getState() && opModeIsActive()){}
+        sleep(900);
+        wobble.setPower(0);*/
         //
-        turnWithGyro(28, -.3);
+        moveToPosition(10, .3);
+        turnWithGyro(23, -.3);
         strafeToPosition(15, .3);
         moveToPosition(-15, .2);
         //
