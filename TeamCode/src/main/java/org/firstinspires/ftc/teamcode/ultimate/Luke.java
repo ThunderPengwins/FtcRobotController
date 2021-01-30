@@ -5,6 +5,8 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+
 @TeleOp(name = "Lukey", group = "working")
 public class Luke extends jeremy {
     //
@@ -78,6 +80,10 @@ public class Luke extends jeremy {
             //
             keepEmDead(xButton);//run wobble servo
             //
+            telemetry.addData("angle", getAngle());
+            telemetry.addData("frontJS", frontJS.getDistance(DistanceUnit.INCH));
+            telemetry.addData("leftJS", leftJS.getDistance(DistanceUnit.INCH));
+            telemetry.addData("rightJS", rightJS.getDistance(DistanceUnit.INCH));
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Stop pending", stopPending);
             telemetry.addData("Stop time", stopTime);

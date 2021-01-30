@@ -17,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Acceleration;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesOrder;
 import org.firstinspires.ftc.robotcore.external.navigation.AxesReference;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Orientation;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -32,6 +33,9 @@ import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvPipeline;
+
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,6 +58,11 @@ public abstract class jeremy extends LinearOpMode {
     Servo feed;
     Servo keeper;
     CRServo intakefeed;
+    //
+    DistanceSensor frontJS;
+    DistanceSensor leftJS;
+    DistanceSensor rightJS;
+    Double fJSlast;
     //
     final static Double FEEDPULL = 1.0;
     final static Double FEEDPUSH = 0.6;
@@ -131,6 +140,11 @@ public abstract class jeremy extends LinearOpMode {
     //
     Double oxOffset = 5.5;//positive is number of inches right from center
     Double oyOffset = -6.25 * 0.6842;//positive is number of inches forward from center, second number is y turn bias
+    //
+    Double rdoff = 6.5;
+    Double ldoff = 8.0;
+    Double fdoff = 10.0;
+    //
     //</editor-fold>
     //
     Boolean opModeStarted;
@@ -215,6 +229,10 @@ public abstract class jeremy extends LinearOpMode {
     public void sensorHardware(){
         wobbleUp = hardwareMap.get(DigitalChannel.class, "wobbleUp");
         //test = hardwareMap.get(DistanceSensor.class, "test");
+        frontJS = hardwareMap.get(DistanceSensor.class, "frontjs");
+        leftJS = hardwareMap.get(DistanceSensor.class, "leftjs");
+        rightJS = hardwareMap.get(DistanceSensor.class, "rightjs");
+        fJSlast = frontJS.getDistance(DistanceUnit.INCH);
     }
     //
     public void setMotorReversals(){
@@ -296,6 +314,9 @@ public abstract class jeremy extends LinearOpMode {
             telemetry.addData("cvready", cvReady);
             telemetry.update();
         }
+        telemetry.addData("cvready", true);
+        telemetry.update();
+        sleep(100);
         //
     }
     //
@@ -552,6 +573,17 @@ public abstract class jeremy extends LinearOpMode {
         backRight.setPower(-input);
     }
     //
+    public void moveWithEncoder(double speed){
+        //
+        motorsWithEncoders();
+        //
+        frontLeft.setPower(speed);
+        backLeft.setPower(speed);
+        frontRight.setPower(speed);
+        backRight.setPower(speed);
+        return;
+    }
+    //
     public void still(){
         frontRight.setPower(0);
         frontLeft.setPower(0);
@@ -567,8 +599,10 @@ public abstract class jeremy extends LinearOpMode {
             intakeRunning = !intakeRunning;
             if(intakeRunning){
                 intake.setPower(intakePower);
+                intakefeed.setPower(intakeFeederPower);
             }else{
                 intake.setPower(0.0);
+                intakefeed.setPower(0);
             }
         }else if(!aButton && aPressed){
             aPressed = false;
@@ -586,7 +620,7 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public void runIntakeFeeder(boolean dLeft, boolean dUp){
-        if(dLeft && !dLeftPressed){
+        /*if(dLeft && !dLeftPressed){
             dLeftPressed = true;
             intakeFeederRunning = !intakeFeederRunning;
             if(intakeFeederRunning){
@@ -596,7 +630,7 @@ public abstract class jeremy extends LinearOpMode {
             }
         }else if(!dLeft && dLeftPressed){
             dLeftPressed = false;
-        }
+        }*/
         //
         if(dUp && !dUpPressed){
             dUpPressed = true;
@@ -922,10 +956,10 @@ public abstract class jeremy extends LinearOpMode {
                 angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
                 gravity = imu.getGravity();
                 yaw = -angles.firstAngle;
-                telemetry.addData("Position", yaw);
+                /*telemetry.addData("Position", yaw);
                 telemetry.addData("second before", second);
                 telemetry.addData("second after", convertify(second));
-                telemetry.update();
+                telemetry.update();*/
             }
             while (!((seconda < yaw && yaw < 180) || (-180 < yaw && yaw < secondb)) && opModeIsActive()) {//within range?
                 angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
@@ -1561,6 +1595,33 @@ public abstract class jeremy extends LinearOpMode {
         return rawa * (1 / maxPower);//front left & back right
     }
     //
+    public double getDFarCoord(int side, double input){//sides: 0 is left, 1 is front, 2 is right
+        //
+        Double doff = 0.0;
+        if(side == 0){
+            doff = ldoff;
+        }else if(side == 1){
+            doff = fdoff;
+        }else{
+            doff = rdoff;
+        }
+        //
+        return (doff + input) * Math.cos(Math.toRadians(getAngle()));
+    }
+    public double getDCloseCoord(int side, double input){//sides: 0 is left, 1 is front, 2 is right
+        //
+        Double doff = 0.0;
+        if(side == 0){
+            doff = ldoff;
+        }else if(side == 1){
+            doff = fdoff;
+        }else{
+            doff = rdoff;
+        }
+        //
+        return (doff + input) * Math.sin(Math.toRadians(getAngle()));
+    }
+    //
     public double getAngle(){
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         return -angles.firstAngle;
@@ -1622,4 +1683,12 @@ public abstract class jeremy extends LinearOpMode {
     }
     //</editor-fold>
     //
+    public double filterfJS(double input){
+        if(input < 100){
+            fJSlast = input;
+            return input;
+        }else{
+            return fJSlast;
+        }
+    }
 }
