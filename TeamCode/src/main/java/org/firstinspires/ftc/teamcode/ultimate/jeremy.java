@@ -57,6 +57,7 @@ public abstract class jeremy extends LinearOpMode {
     //
     Servo feed;
     Servo keeper;
+    Servo kelper;
     CRServo intakefeed;
     //
     DistanceSensor frontJS;
@@ -65,7 +66,7 @@ public abstract class jeremy extends LinearOpMode {
     Double fJSlast;
     //
     final static Double FEEDPULL = 1.0;
-    final static Double FEEDPUSH = 0.6;
+    final static Double FEEDPUSH = 0.65;
     final static Double KEEPERCLOSED = 0.0;
     final static Double KEEPEROPEN = 0.5;
     //
@@ -213,6 +214,7 @@ public abstract class jeremy extends LinearOpMode {
         //
         feed = hardwareMap.servo.get("feed");
         keeper = hardwareMap.servo.get("keeper");
+        kelper = hardwareMap.servo.get("kelper");
         intakefeed = hardwareMap.crservo.get("intakefeed");
         //
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
@@ -703,8 +705,10 @@ public abstract class jeremy extends LinearOpMode {
         if(xButton && !xPressed){
             if(keepClosed){
                 keeper.setPosition(1.0);//set open
+                kelper.setPosition(1.0);
             }else{
                 keeper.setPosition(0.0);//set closed
+                kelper.setPosition(0.0);
             }
             keepClosed = !keepClosed;
             xPressed = true;
@@ -1013,9 +1017,9 @@ public abstract class jeremy extends LinearOpMode {
         while (!(angle - 5 < current && current < angle + 5)){
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
             current = -angles.firstAngle;
-            telemetry.addData("Target",angle);
+            /*telemetry.addData("Target",angle);
             telemetry.addData("Current",current);
-            telemetry.update();
+            telemetry.update();*/
         }
         still();
         //
@@ -1071,7 +1075,20 @@ public abstract class jeremy extends LinearOpMode {
         //
         boolean set = false;
         //
-        while (frontLeft.isBusy() && frontRight.isBusy() && backLeft.isBusy() && backRight.isBusy() && opModeIsActive()){
+        if(inches > 0){
+            while (frontLeft.getCurrentPosition() < bench && opModeIsActive()){}
+        }else{
+            while (frontLeft.getCurrentPosition() > bench && opModeIsActive()){}
+        }
+        //
+        frontLeft.setPower(speed2);
+        backLeft.setPower(speed2);
+        frontRight.setPower(speed2);
+        backRight.setPower(speed2);
+        //
+        while (frontLeft.isBusy() && frontRight.isBusy() && backLeft.isBusy() && backRight.isBusy() && opModeIsActive()){}
+        //
+        /*while (frontLeft.isBusy() && frontRight.isBusy() && backLeft.isBusy() && backRight.isBusy() && opModeIsActive()){
             //
             if (inches > 0 && !set){
                 if (frontLeft.getCurrentPosition() > bench){
@@ -1091,10 +1108,10 @@ public abstract class jeremy extends LinearOpMode {
                 }
             }
             //
-            telemetry.addData("target",frontLeft.getTargetPosition());
+            /*telemetry.addData("target",frontLeft.getTargetPosition());
             telemetry.addData("current",frontLeft.getCurrentPosition());
             telemetry.update();
-        }
+        }*/
         still();
         return;
     }

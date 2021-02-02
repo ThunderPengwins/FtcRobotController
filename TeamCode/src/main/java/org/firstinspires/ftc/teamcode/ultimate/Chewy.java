@@ -16,14 +16,17 @@ public class Chewy extends jeremy {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         //
         Init();
-        telemetry.addData("Init", "complete");
-        telemetry.update();
         //
         feed.setPosition(FEEDPULL);
         //
+        /*int ringNum = getRings();
+        telemetry.addData("Rings", ringNum);
+        telemetry.update();
+        sleep(100);*/
+        //
         waitForStartify();
         //
-        Log.i("Program started", "//////////////////////////////////////////////////////////////");
+        //Log.i("Program started", "//////////////////////////////////////////////////////////////");
         //
         int ringNum = getRings();
         telemetry.addData("Rings", ringNum);
@@ -48,12 +51,12 @@ public class Chewy extends jeremy {
             moveToPosition(-27, .3);
         }else{
             //moveToPosition(102, .75);
-            stageToPosition(102, .75, .5);
+            stageToPosition(110, .6, .4);
             //
             wiggleToPosition(true, 20, .2);
             //
             wiggleToPosition(true, -10, .2);
-            turnToAngle(-3, .15);
+            turnToAngle(-3, .05);
             //
             //moveToPosition(-37, .75);
             //
@@ -67,7 +70,7 @@ public class Chewy extends jeremy {
             }
             still();*/
             //moveToPosition(-42, .3);
-            stageToPosition(-50, .75, .3);
+            stageToPosition(-58, .75, .3);
         }
         launcher.setPower(.918);
         if(ringNum == 0) {
@@ -122,9 +125,9 @@ public class Chewy extends jeremy {
             keeper.setPosition(1.0);//set closed
             sleep(900);
             //
-            wobble.setPower(.5);//pick up wobble goal
+            /*wobble.setPower(.5);//pick up wobble goal
             sleep(1000);
-            wobble.setPower(0);
+            wobble.setPower(0);*/
             //
             intakefeed.setPower(1.0);
             turnWithGyro(157, .3);
@@ -133,48 +136,51 @@ public class Chewy extends jeremy {
             //
             moveToPosition(-50, .5);//return from wobble goal
             //
-            wobble.setPower(-0.4);
+            /*wobble.setPower(-0.4);//set down wobble goal
             sleep(500);
-            wobble.setPower(0);
+            wobble.setPower(0);*/
             //
             keeper.setPosition(0);//set open
             sleep(700);
             //
-            moveToPosition(-2, .5);
+            moveToPosition(5, .5);
             //
         }else{
             //
-            turnToAngle(-3, .2);
+            turnToAngle(2, .1);
             //
             moveToPosition(-24, .3);
             //
-            turnWithGyro(73, .3);
+            turnWithGyro(65, .3);
             //
-            moveToPosition(-16, .3);//go to wobble goal
+            moveToPosition(-14, .3);//go to wobble goal
             //
             keeper.setPosition(1.0);//set closed
             sleep(900);
             //
-            wobble.setPower(.45);//pick up wobble goal
+            /*wobble.setPower(.45);//pick up wobble goal
             sleep(1000);
-            wobble.setPower(0);
+            wobble.setPower(0);*/
             //
-            moveToPosition(20, .4);
+            moveToPosition(22, .4);
             //
-            turnToAngle(173, .45);
+            turnToAngle(180, .3);//turn towards zone
             //
-            stageToPosition(-62, 1, .6);
+            //stageToPosition(-64, 1, .6);
+            moveToPosition(-60, 1);//go to place wobble
+            sleep(500);
             //moveToPosition(-62, .9);
             //
-            wobble.setPower(-0.4);
+            /*wobble.setPower(-0.4);
             sleep(500);
-            wobble.setPower(0);
+            wobble.setPower(0);*/
             //
             keeper.setPosition(0);//set open
+            sleep(800);
             //
-            turnPast(-175, .7, true);
+            //turnPast(-150, .7, false);
             //
-            moveToPosition(20, 1);
+            moveToPosition(25, 1);
             //
         }
     }
