@@ -26,9 +26,13 @@ public class Chewy extends jeremy {
         //
         waitForStartify();
         //
-        //Log.i("Program started", "//////////////////////////////////////////////////////////////");
+        //Log.i("Program started", "////");
         //
         int ringNum = getRings();
+        for(int i = 0; i < 10; i++){
+            ringNum = getRings();
+            sleep(50);
+        }
         telemetry.addData("Rings", ringNum);
         telemetry.update();
         if(ringNum == 0) {
@@ -91,7 +95,7 @@ public class Chewy extends jeremy {
         for(int i = 0; i < 3; i++) {
             sleep(900);
             feed.setPosition(FEEDPUSH);
-            sleep(900);
+            sleep(1000);
             feed.setPosition(FEEDPULL);
         }
         launcher.setPower(0);
@@ -107,6 +111,7 @@ public class Chewy extends jeremy {
             moveToPosition(-37, .3);//go to wobble goal
             //
             keeper.setPosition(1.0);//set closed
+            kelper.setPosition(0.0);
             //
             sleep(700);
             //
@@ -114,6 +119,7 @@ public class Chewy extends jeremy {
             moveToPosition(-40, .3);//return from wobble goal
             //
             keeper.setPosition(0);//set open
+            kelper.setPosition(1);
             sleep(700);
         }else if(ringNum == 1){
             //
@@ -123,6 +129,7 @@ public class Chewy extends jeremy {
             moveToPosition(-36, .3);//go to wobble goal
             //
             keeper.setPosition(1.0);//set closed
+            kelper.setPosition(0.0);
             sleep(900);
             //
             /*wobble.setPower(.5);//pick up wobble goal
@@ -141,6 +148,7 @@ public class Chewy extends jeremy {
             wobble.setPower(0);*/
             //
             keeper.setPosition(0);//set open
+            kelper.setPosition(1);
             sleep(700);
             //
             moveToPosition(5, .5);
@@ -156,6 +164,7 @@ public class Chewy extends jeremy {
             moveToPosition(-14, .3);//go to wobble goal
             //
             keeper.setPosition(1.0);//set closed
+            kelper.setPosition(0.0);
             sleep(900);
             //
             /*wobble.setPower(.45);//pick up wobble goal
@@ -176,6 +185,7 @@ public class Chewy extends jeremy {
             wobble.setPower(0);*/
             //
             keeper.setPosition(0);//set open
+            kelper.setPosition(1);
             sleep(800);
             //
             //turnPast(-150, .7, false);

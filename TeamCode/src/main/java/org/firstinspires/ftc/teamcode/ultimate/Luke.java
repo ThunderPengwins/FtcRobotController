@@ -16,11 +16,13 @@ public class Luke extends jeremy {
     boolean bButton;
     boolean yButton;
     boolean xButton;
+    boolean oyButton;
     boolean dUp;
     boolean dDown;
     boolean bumber;
     boolean firstdLeft;
     boolean firstdUp;
+    boolean firstdDown;
     float leftTrigger;
     float rightTrigger;
     //
@@ -54,21 +56,27 @@ public class Luke extends jeremy {
             bButton = gamepad2.b;
             yButton = gamepad1.y;
             xButton = gamepad2.x;
+            oyButton = gamepad2.y;
             dUp = gamepad2.dpad_up;
             dDown = gamepad2.dpad_down;
             bumber = gamepad2.left_bumper;
             firstdLeft = gamepad1.dpad_left;//start and stop intake feeder
             firstdUp = gamepad1.dpad_up;//reverse intake feeder direction
+            firstdDown = gamepad1.dpad_down;//move behind line
             leftTrigger = gamepad2.left_trigger;
             rightTrigger = gamepad2.right_trigger;
             //
-            fullBaby(leftx, lefty, rightx, 0.5, 1.0);//all chassis motion
-            //
-            if(gamepad1.left_trigger > 0){//turn for launch
-                turnToAngle(-8, .3);
+            if(tapeMode == 0) {
+                fullBaby(leftx, lefty, rightx, 0.5, 1.0);//all chassis motion
             }
             //
-            runIntake(aButton,yButton);
+            if(gamepad1.left_trigger > 0){//strafe for power shot
+                //turnToAngle(-8, .3);
+                launcher.setPower(.85);
+                strafeToPosition(-7.5, .3);
+            }
+            //
+            runIntake(aButton,yButton,oyButton);
             //
             runIntakeFeeder(firstdLeft, firstdUp);
             //
@@ -80,10 +88,14 @@ public class Luke extends jeremy {
             //
             keepEmDead(xButton);//run wobble servo
             //
+            runTaper(firstdDown);
+            //
+            telemetry.addData("tape mode", tapeMode);
+            telemetry.addData("red value", tape.red());
             telemetry.addData("angle", getAngle());
             telemetry.addData("frontJS", filterfJS(frontJS.getDistance(DistanceUnit.INCH)));
-            telemetry.addData("leftJS", leftJS.getDistance(DistanceUnit.INCH));
-            telemetry.addData("rightJS", rightJS.getDistance(DistanceUnit.INCH));
+            telemetry.addData("leftJS", filterlJS(leftJS.getDistance(DistanceUnit.INCH)));
+            telemetry.addData("rightJS", filterrJS(rightJS.getDistance(DistanceUnit.INCH)));
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Stop pending", stopPending);
             telemetry.addData("Stop time", stopTime);

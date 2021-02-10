@@ -4,6 +4,7 @@ import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.ColorSensor;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
@@ -64,9 +65,13 @@ public abstract class jeremy extends LinearOpMode {
     DistanceSensor leftJS;
     DistanceSensor rightJS;
     Double fJSlast;
+    Double lJSlast;
+    Double rJSlast;
+    //
+    ColorSensor tape;
     //
     final static Double FEEDPULL = 1.0;
-    final static Double FEEDPUSH = 0.65;
+    final static Double FEEDPUSH = 0.5;
     final static Double KEEPERCLOSED = 0.0;
     final static Double KEEPEROPEN = 0.5;
     //
@@ -108,6 +113,7 @@ public abstract class jeremy extends LinearOpMode {
     Boolean aPressed = false;
     Boolean bPressed = false;
     Boolean yPressed = false;
+    Boolean oyPressed = false;
     Boolean xPressed = false;
     Boolean dLeftPressed = false;
     Boolean dUpPressed = false;
@@ -128,6 +134,9 @@ public abstract class jeremy extends LinearOpMode {
     //
     Long feedStartTime = 0L;
     Long timeDif = 0L;
+    //
+    Integer tapeMode = 0;
+    Integer tapeStart = 0;
     //</editor-fold>
     //
     //<editor-fold desc="Odometry">
@@ -235,6 +244,7 @@ public abstract class jeremy extends LinearOpMode {
         leftJS = hardwareMap.get(DistanceSensor.class, "leftjs");
         rightJS = hardwareMap.get(DistanceSensor.class, "rightjs");
         fJSlast = frontJS.getDistance(DistanceUnit.INCH);
+        tape = hardwareMap.get(ColorSensor.class, "tape");
     }
     //
     public void setMotorReversals(){
@@ -595,7 +605,7 @@ public abstract class jeremy extends LinearOpMode {
     //</editor-fold>
     //
     //<editor-fold desc="TeleOp Functions">
-    public void runIntake(boolean aButton, boolean yButton){
+    public void runIntake(boolean aButton, boolean yButton, boolean oyButton){
         if(aButton && !aPressed){
             aPressed = true;
             intakeRunning = !intakeRunning;
@@ -618,6 +628,16 @@ public abstract class jeremy extends LinearOpMode {
             }
         }else if(!yButton && yPressed){
             yPressed = false;
+        }
+        //
+        if (oyButton && !oyPressed) {
+            oyPressed = true;
+            intakePower = -intakePower;
+            if (intakeRunning) {
+                intake.setPower(intakePower);
+            }
+        }else if(!oyButton && oyPressed){
+            oyPressed = false;
         }
     }
     //
@@ -705,15 +725,36 @@ public abstract class jeremy extends LinearOpMode {
         if(xButton && !xPressed){
             if(keepClosed){
                 keeper.setPosition(1.0);//set open
-                kelper.setPosition(1.0);
+                kelper.setPosition(0.0);
             }else{
                 keeper.setPosition(0.0);//set closed
-                kelper.setPosition(0.0);
+                kelper.setPosition(1.0);
             }
             keepClosed = !keepClosed;
             xPressed = true;
         }else if(!xButton && xPressed){
             xPressed = false;
+        }
+    }
+    //
+    public void runTaper(boolean dDown){
+        if(tapeMode == 0 && dDown){
+            tapeMode = 1;
+            babyTurn(-.2, 1);
+        }else if(getAngle() < 10 && (tapeMode == 1 || tapeMode == 2)){
+            tapeMode = 3;
+            move(0, -1, .4);
+            tapeStart = frontLeft.getCurrentPosition();
+        }else if(tape.red() > 80 && tapeMode == 3){
+            tapeMode = 0;
+            still();
+        }
+        if(!dDown && tapeMode == 1){
+            tapeMode = 2;
+        }
+        if((frontLeft.getCurrentPosition() < tapeStart - (conversion * 40) && tapeMode == 3) || (dDown && tapeMode != 0 && tapeMode != 1)){
+            tapeMode = 0;
+            still();
         }
     }
     //
@@ -1698,7 +1739,6 @@ public abstract class jeremy extends LinearOpMode {
             }
         }
     }
-    //</editor-fold>
     //
     public double filterfJS(double input){
         if(input < 100){
@@ -1708,4 +1748,23 @@ public abstract class jeremy extends LinearOpMode {
             return fJSlast;
         }
     }
+    //
+    public double filterlJS(double input){
+        if(input < 100){
+            lJSlast = input;
+            return input;
+        }else{
+            return lJSlast;
+        }
+    }
+    //
+    public double filterrJS(double input){
+        if(input < 100){
+            rJSlast = input;
+            return input;
+        }else{
+            return rJSlast;
+        }
+    }
+    //</editor-fold>
 }

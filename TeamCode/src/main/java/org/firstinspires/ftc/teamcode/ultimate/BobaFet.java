@@ -8,6 +8,7 @@ public class BobaFet extends jeremy {
     boolean aButton;
     boolean bButton;
     boolean yButton;
+    boolean oyButton;
     boolean dUp;
     boolean dDown;
     boolean bumber;
@@ -23,11 +24,12 @@ public class BobaFet extends jeremy {
             aButton = gamepad1.a;
             bButton = gamepad1.b;
             yButton = gamepad1.y;
+            oyButton = gamepad2.y;
             dUp = gamepad1.dpad_up;
             dDown = gamepad1.dpad_down;
             bumber = gamepad1.left_bumper;
             //
-            runIntake(aButton, yButton);
+            runIntake(aButton, yButton, oyButton);
             //
             runFeed(bButton);
             //
