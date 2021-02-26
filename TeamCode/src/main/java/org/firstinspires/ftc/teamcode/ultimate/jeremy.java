@@ -64,9 +64,13 @@ public abstract class jeremy extends LinearOpMode {
     DistanceSensor frontJS;
     DistanceSensor leftJS;
     DistanceSensor rightJS;
+    DistanceSensor oleftJS;
+    DistanceSensor orightJS;
     Double fJSlast;
     Double lJSlast;
+    Double olJSlast;
     Double rJSlast;
+    Double orJSlast;
     //
     ColorSensor tape;
     //
@@ -75,11 +79,14 @@ public abstract class jeremy extends LinearOpMode {
     final static Double KEEPERCLOSED = 0.0;
     final static Double KEEPEROPEN = 0.5;
     //
+    final static Double R2 = 15.5;//use for arcing odometry
+    //
     DigitalChannel wobbleUp;
     //
     BNO055IMU imu;
     Orientation angles;
     Acceleration gravity;
+    Float origin = 0F;
     //
     OpenCvCamera webcam;
     StoneOrientationAnalysisPipeline pipeline;
@@ -117,7 +124,8 @@ public abstract class jeremy extends LinearOpMode {
     Boolean xPressed = false;
     Boolean dLeftPressed = false;
     Boolean dUpPressed = false;
-    Double intakePower = -1.0;
+    Boolean dDownPressed = false;
+    Double intakePower = 1.0;
     Double intakeFeederPower = 1.0;
     Boolean feedRunning = false;
     Long stopTime = 0L;
@@ -128,15 +136,18 @@ public abstract class jeremy extends LinearOpMode {
     Boolean intakeFeederRunning = false;
     Boolean arrowPressed = false;
     //
-    Double launcherPower = 0.95;
+    Double launcherPower = 0.925;
+    Double psLauncherPower = 0.85;
     Boolean laucherToggle = false;
     Boolean togglePressed = false;
+    Boolean psTogglePressed = false;
     //
     Long feedStartTime = 0L;
     Long timeDif = 0L;
     //
     Integer tapeMode = 0;
     Integer tapeStart = 0;
+    Boolean tapeSlowTurn = false;
     //</editor-fold>
     //
     //<editor-fold desc="Odometry">
@@ -242,6 +253,8 @@ public abstract class jeremy extends LinearOpMode {
         //test = hardwareMap.get(DistanceSensor.class, "test");
         frontJS = hardwareMap.get(DistanceSensor.class, "frontjs");
         leftJS = hardwareMap.get(DistanceSensor.class, "leftjs");
+        oleftJS = hardwareMap.get(DistanceSensor.class, "oleftjs");
+        orightJS = hardwareMap.get(DistanceSensor.class, "orightjs");
         rightJS = hardwareMap.get(DistanceSensor.class, "rightjs");
         fJSlast = frontJS.getDistance(DistanceUnit.INCH);
         tape = hardwareMap.get(ColorSensor.class, "tape");
@@ -293,6 +306,8 @@ public abstract class jeremy extends LinearOpMode {
         telemetry.addData("init imu","");
         telemetry.update();
         imu.initialize(parameters);
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        origin = -angles.firstAngle;
         telemetry.addData("imu initiated", "");
         telemetry.addData("Angle",getAngle());
         telemetry.update();
@@ -665,13 +680,13 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
-    public void runLauncherIncr(boolean dUp, boolean dDown, boolean bumberButton){
+    public void runLauncherIncr(boolean dUp, boolean dDown, boolean leftBumper, boolean rightBumper){
         if((dUp || dDown) && !arrowPressed){
             arrowPressed = true;
             if(dUp && launcherPower < 1){
-                launcherPower += .05;
+                launcherPower += .025;
             }else if(launcherPower > 0){
-                launcherPower -= .05;
+                launcherPower -= .025;
             }
             if(laucherToggle) {
                 launcher.setPower(launcherPower);
@@ -680,7 +695,7 @@ public abstract class jeremy extends LinearOpMode {
             arrowPressed = false;
         }
         //
-        if(bumberButton && !togglePressed){
+        if(leftBumper && !togglePressed){
             laucherToggle = !laucherToggle;
             if(laucherToggle){
                 launcher.setPower(launcherPower);
@@ -688,8 +703,16 @@ public abstract class jeremy extends LinearOpMode {
                 launcher.setPower(0);
             }
             togglePressed = true;
-        }else if(!bumberButton && togglePressed){
+        }else if(!leftBumper && togglePressed){
             togglePressed = false;
+        }
+        //
+        if(rightBumper && !psTogglePressed){
+            launcherPower = psLauncherPower;
+            launcher.setPower(psLauncherPower);
+            psTogglePressed = true;
+        }else if(!rightBumper && psTogglePressed){
+            psTogglePressed = false;
         }
         //
     }
@@ -738,22 +761,41 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public void runTaper(boolean dDown){
-        if(tapeMode == 0 && dDown){
+        if(tapeMode == 0 && dDown && !dDownPressed){
             tapeMode = 1;
-            babyTurn(-.2, 1);
-        }else if(getAngle() < 10 && (tapeMode == 1 || tapeMode == 2)){
-            tapeMode = 3;
+            dDownPressed = true;
+            if(getAngle() > 10){
+                /*if(getAngle() < 20){
+                    babyTurn(-.1, 1);
+                    tapeSlowTurn = true;
+                }else{*/
+                    babyTurn(-.2, 1);
+                    //tapeSlowTurn = false;
+                //}
+            }else{
+                /*if(getAngle() > 0){
+                    babyTurn(.1, 1);
+                    tapeSlowTurn = true;
+                }else{*/
+                    babyTurn(.2, 1);
+                    //tapeSlowTurn = false;
+                //}
+            }
+            //babyTurn(-.2, 1);
+        }else if((/*(tapeSlowTurn &&*/ inBounds(10, 5)/*) || (!tapeSlowTurn && inBounds(10, 10))*/) && tapeMode == 1){
+            tapeMode = 2;
             move(0, -1, .4);
             tapeStart = frontLeft.getCurrentPosition();
-        }else if(tape.red() > 80 && tapeMode == 3){
+        }else if(tape.red() > 80 && tapeMode == 2){
             tapeMode = 0;
             still();
         }
-        if(!dDown && tapeMode == 1){
-            tapeMode = 2;
+        if(dDownPressed && !dDown){
+            dDownPressed = false;
         }
-        if((frontLeft.getCurrentPosition() < tapeStart - (conversion * 40) && tapeMode == 3) || (dDown && tapeMode != 0 && tapeMode != 1)){
+        if((frontLeft.getCurrentPosition() < tapeStart - (conversion * 60) && tapeMode == 2) || (dDown && tapeMode != 0 && !dDownPressed)){
             tapeMode = 0;
+            dDownPressed = true;
             still();
         }
     }
@@ -1058,6 +1100,28 @@ public abstract class jeremy extends LinearOpMode {
         while (!(angle - 5 < current && current < angle + 5)){
             angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
             current = -angles.firstAngle;
+            /*telemetry.addData("Target",angle);
+            telemetry.addData("Current",current);
+            telemetry.update();*/
+        }
+        still();
+        //
+    }
+    //
+    public void turnToAngleError(double angle, double speed, double error){
+        //
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        double current = -angles.firstAngle;
+        //
+        if (current > angle){
+            turnWithEncoder(-speed);
+        }else{
+            turnWithEncoder(speed);
+        }
+        //
+        while (!(inBounds(angle, error)) && opModeIsActive()){
+            //angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            //current = -angles.firstAngle;
             /*telemetry.addData("Target",angle);
             telemetry.addData("Current",current);
             telemetry.update();*/
@@ -1630,6 +1694,28 @@ public abstract class jeremy extends LinearOpMode {
 
     }
     //
+    public double getArcOdoX(int a, int b){
+        double r1 = getArcOdoR(a, b);
+        double x2 = (r1 + (R2 / 2)) * Math.cos(Math.toRadians(getArcOdoAngle(a, r1)));
+        //
+        return r1 + (R2 / 2) - x2;
+    }
+    //
+    public double getArcOdoY(int a, int b){
+        double r1 = getArcOdoR(a, b);
+        double theta = getArcOdoAngle(a, r1);
+        //
+        return (r1 + (R2 / 2)) * Math.sin(theta);
+    }
+    //
+    public double getArcOdoR(int a, int b){
+        return R2 / ((a / b) - 1);
+    }
+    //
+    public double getArcOdoAngle(int a, double r1){
+        return 180 * a / (r1 * Math.PI);
+    }
+    //
     public double getTurnInches(double offset, double angleChange){
         return (angleChange / 360) * 4 * offset * Math.PI * tbias;// * 2//return inches wheels move when turning
     }
@@ -1653,8 +1739,8 @@ public abstract class jeremy extends LinearOpMode {
         return rawa * (1 / maxPower);//front left & back right
     }
     //
-    public double getDFarCoord(int side, double input){//sides: 0 is left, 1 is front, 2 is right
-        //
+    public double getDFarCoord(int side, double input){
+        //sides: 0 is left, 1 is front, 2 is right
         Double doff = 0.0;
         if(side == 0){
             doff = ldoff;
@@ -1682,7 +1768,7 @@ public abstract class jeremy extends LinearOpMode {
     //
     public double getAngle(){
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        return -angles.firstAngle;
+        return -angles.firstAngle - origin;
     }
     //
     public double pythagorus(double a, double b){
@@ -1757,6 +1843,14 @@ public abstract class jeremy extends LinearOpMode {
             return lJSlast;
         }
     }
+    public double filterolJS(double input){
+        if(input < 100){
+            olJSlast = input;
+            return input;
+        }else{
+            return olJSlast;
+        }
+    }
     //
     public double filterrJS(double input){
         if(input < 100){
@@ -1765,6 +1859,19 @@ public abstract class jeremy extends LinearOpMode {
         }else{
             return rJSlast;
         }
+    }
+    public double filterorJS(double input){
+        if(input < 100){
+            orJSlast = input;
+            return input;
+        }else{
+            return orJSlast;
+        }
+    }
+    //
+    public void resetOrigin(){
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        origin = -angles.firstAngle;
     }
     //</editor-fold>
 }

@@ -38,7 +38,7 @@ public class Leia extends jeremy {
             try {
                 packet.fieldOverlay()
                         .setStroke("red")
-                        .strokeRect(-20, -20, fJS, 40);
+                        .strokeRect(-20, -20, 40, 80);
                 packet.put("Canvas", "successful");
             }catch(Exception e){
                 packet.put("Canvas", "failure: " + e);

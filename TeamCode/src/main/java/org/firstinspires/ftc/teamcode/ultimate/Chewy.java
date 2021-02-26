@@ -102,6 +102,7 @@ public class Chewy extends jeremy {
         //
         wobble.setPower(-0.4);
         keeper.setPosition(0);//set open
+        kelper.setPosition(1);
         sleep(500);
         wobble.setPower(0);
         //

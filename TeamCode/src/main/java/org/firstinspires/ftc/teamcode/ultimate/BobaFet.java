@@ -12,6 +12,7 @@ public class BobaFet extends jeremy {
     boolean dUp;
     boolean dDown;
     boolean bumber;
+    boolean rightbumber;
     //
     public void runOpMode() throws InterruptedException {
         //
@@ -28,12 +29,13 @@ public class BobaFet extends jeremy {
             dUp = gamepad1.dpad_up;
             dDown = gamepad1.dpad_down;
             bumber = gamepad1.left_bumper;
+            rightbumber = gamepad1.right_bumper;
             //
             runIntake(aButton, yButton, oyButton);
             //
             runFeed(bButton);
             //
-            runLauncherIncr(dUp,dDown,bumber);
+            runLauncherIncr(dUp,dDown,bumber, rightbumber);
             //
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Huh?", feedRunning && (System.currentTimeMillis() > feedStartTime + 1000));
