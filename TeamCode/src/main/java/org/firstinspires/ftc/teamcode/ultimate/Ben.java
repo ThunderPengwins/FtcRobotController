@@ -40,7 +40,7 @@ public class Ben extends jeremy{
         packet.put("ring","1");
         dashboard.sendTelemetryPacket(packet);
         //
-        turnToAngleError(4,.15,2);//first turn (right)
+        turnToAngleError(5.5,.1,2);//first turn (right)
         feed.setPosition(FEEDPUSH);
         sleep(1000);
         launcher.setPower(.81);
@@ -49,7 +49,7 @@ public class Ben extends jeremy{
         packet.put("ring","2");
         dashboard.sendTelemetryPacket(packet);
         //
-        turnToAngleError(0, .15,3);//second turn (middle)
+        turnToAngleError(0, .1,2);//second turn (middle)
         sleep(500);
         feed.setPosition(FEEDPUSH);
         sleep(1000);
@@ -59,7 +59,7 @@ public class Ben extends jeremy{
         packet.put("ring","3");
         dashboard.sendTelemetryPacket(packet);
         //
-        turnToAngleError(-6,.15,3);//last turn (left)
+        turnToAngleError(-6,.1,2);//last turn (left)
         sleep(500);
         feed.setPosition(FEEDPUSH);
         sleep(1000);
@@ -70,7 +70,7 @@ public class Ben extends jeremy{
         //
         turnToAngleError(-130, .3,5);
         //
-        moveToPosition(-35, .3);
+        moveToPosition(-33, .5);
         //
         wobble.setPower(-0.4);
         sleep(500);
@@ -79,11 +79,53 @@ public class Ben extends jeremy{
         kelper.setPosition(1);
         sleep(500);
         //
-        moveToPosition(15, .2);
+        moveToPosition(6, .5);
         //
-        turnWithGyro(95, .3);
+        intake.setPower(1);
         //
-        moveToPosition(55, .3);
+        turnWithGyro(110, .4);
+        //
+        intakefeed.setPower(1);
+        //
+        moveToPosition(-55, .5);
+        //
+        launcher.setPower(.97);
+        //
+        keeper.setPosition(1);//set closed
+        kelper.setPosition(0);
+        sleep(700);
+        //
+        /*wobble.setPower(.5);
+        sleep(1000);
+        wobble.setPower(0);*/
+        //
+        moveToPosition(40, .5);
+        //
+        turnPast(-10, .3, true);
+        turnToAngleError(0, .1, 2);
+        //
+        intake.setPower(0);
+        intakefeed.setPower(0);
+        //
+        sleep(1000);
+        //
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        feed.setPosition(FEEDPULL);
+        sleep(1000);
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        launcher.setPower(0);
+        //
+        turnToAngle(-130, .8);
+        //
+        moveToPosition(-12, .6);
+        //
+        keeper.setPosition(0);//set open
+        kelper.setPosition(1);
+        sleep(500);
+        //
+        //moveToPosition(10,.7);
         //
         /*for(int i = 0; i < 3; i++) {
             sleep(900);
