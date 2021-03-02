@@ -6,9 +6,10 @@ import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.openftc.revextensions2.ExpansionHubEx;
 
-@TeleOp(name = "Luke", group = "working")
-public class Luke extends jeremy {
+@TeleOp(name = "Lukewarm", group = "test")
+public class Lukewarm extends jeremy {
     //
     double horiFactor = 1.1;
     //
@@ -45,19 +46,16 @@ public class Luke extends jeremy {
         //
         //backRight.setDirection(DcMotorSimple.Direction.FORWARD);
         //
-        //angle = getAngle();
-        //
         waitForStartify();
         //
         while (opModeIsActive()){
-            //
-            //angle = getAngle();
             //
             if (gamepad1.a){
                 origin = getAngle();
                 //orchosen = true;
             }
             //
+            //<editor-fold desc="Gamepad inputs">
             leftx = gamepad1.left_stick_x;
             lefty = -gamepad1.left_stick_y;
             rightx = gamepad1.right_stick_x;
@@ -77,6 +75,9 @@ public class Luke extends jeremy {
             firstdDown = gamepad1.dpad_down;//move behind line
             leftTrigger = gamepad2.left_trigger;
             rightTrigger = gamepad2.right_trigger;
+            //</editor-fold>
+            //
+            //angle = getAngle();
             //
             if(tapeMode == 0) {
                 fullBaby(leftx, lefty, rightx, 0.5, 1.0);//all chassis motion
@@ -112,15 +113,15 @@ public class Luke extends jeremy {
             //
             runTaper(firstdDown);
             //
-            telemetry.addData("Loop speed", System.currentTimeMillis() - time);
+            telemetry.addData("loop speed", System.currentTimeMillis() - time);
             telemetry.addData("tape mode", tapeMode);
-            telemetry.addData("red value", tape.red());
-            telemetry.addData("angle", getAngle());
-            telemetry.addData("frontJS", filterfJS(frontJS.getDistance(DistanceUnit.INCH)));
+            //telemetry.addData("red value", tape.red());
+            //telemetry.addData("angle", angle);
+            /*telemetry.addData("frontJS", filterfJS(frontJS.getDistance(DistanceUnit.INCH)));
             telemetry.addData("leftJS", filterlJS(leftJS.getDistance(DistanceUnit.INCH)));
             telemetry.addData("alt leftJS", filterolJS(oleftJS.getDistance(DistanceUnit.INCH)));
             telemetry.addData("rightJS", filterrJS(rightJS.getDistance(DistanceUnit.INCH)));
-            telemetry.addData("alt rightJS", filterorJS(orightJS.getDistance(DistanceUnit.INCH)));
+            telemetry.addData("alt rightJS", filterorJS(orightJS.getDistance(DistanceUnit.INCH)));*/
             telemetry.addData("Feed running", feedRunning);
             telemetry.addData("Stop pending", stopPending);
             telemetry.addData("Stop time", stopTime);
@@ -128,8 +129,8 @@ public class Luke extends jeremy {
             telemetry.addData("Intake running", intakeRunning);
             telemetry.addData("Intakefeed running", intakeFeederRunning);
             telemetry.addData("Intakefeed power", intakeFeederPower);
-            telemetry.addData("Wobble up", wobbleUp.getState());
-            telemetry.addData("Keeper position", keeper.getPosition());
+            //telemetry.addData("Wobble up", wobbleUp.getState());
+            //telemetry.addData("Keeper position", keeper.getPosition());
             telemetry.update();
             time = System.currentTimeMillis();
         }

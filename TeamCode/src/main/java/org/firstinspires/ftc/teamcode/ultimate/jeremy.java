@@ -34,6 +34,7 @@ import org.openftc.easyopencv.OpenCvCamera;
 import org.openftc.easyopencv.OpenCvCameraFactory;
 import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvPipeline;
+import org.openftc.revextensions2.ExpansionHubEx;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -44,6 +45,9 @@ import java.util.List;
 
 public abstract class jeremy extends LinearOpMode {
     public CameraName cameraName;
+    //
+    ExpansionHubEx controlHub;
+    ExpansionHubEx expansionHub;
     //
     DcMotor frontRight;
     DcMotor frontLeft;
@@ -87,6 +91,7 @@ public abstract class jeremy extends LinearOpMode {
     Orientation angles;
     Acceleration gravity;
     Float origin = 0F;
+    //Double angle = 0.0;
     //
     OpenCvCamera webcam;
     StoneOrientationAnalysisPipeline pipeline;
@@ -172,6 +177,12 @@ public abstract class jeremy extends LinearOpMode {
     //
     //<editor-fold desc="Init Functions">
     public void Init(){
+        //
+        controlHub = hardwareMap.get(ExpansionHubEx.class, "Control Hub");
+        expansionHub = hardwareMap.get(ExpansionHubEx.class, "Expansion Hub 1");
+        controlHub.setLedColor(255,0,0);
+        expansionHub.setLedColor(255,0,0);
+        //
         chassisHardware();
         motorHardware();
         sensorHardware();
@@ -184,8 +195,20 @@ public abstract class jeremy extends LinearOpMode {
         initGyro();
         initOpen();
         //
-        telemetry.addData("Initialization", "complete");
-        telemetry.update();
+        if(expansionHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.9) {
+            controlHub.setLedColor(0, 255, 0);
+            expansionHub.setLedColor(0, 255, 0);
+            //
+            telemetry.addData("Initialization", "complete");
+            telemetry.update();
+        }else{
+            controlHub.setLedColor(255, 196, 0);
+            expansionHub.setLedColor(255, 196, 0);
+            //
+            telemetry.addData("Initialization", "complete");
+            telemetry.addData("WARNING", "Battery power low");
+            telemetry.update();
+        }
         //
     }
     //
@@ -322,6 +345,8 @@ public abstract class jeremy extends LinearOpMode {
         //
         int cameraMonitorViewId = hardwareMap.appContext.getResources().getIdentifier("cameraMonitorViewId", "id", hardwareMap.appContext.getPackageName());
         webcam = OpenCvCameraFactory.getInstance().createWebcam(hardwareMap.get(WebcamName.class, "webcam"), cameraMonitorViewId);
+        //
+        sleep(1000);
         //
         // Open async and start streaming inside opened callback
         webcam.openCameraDeviceAsync(new OpenCvCamera.AsyncCameraOpenListener(){
