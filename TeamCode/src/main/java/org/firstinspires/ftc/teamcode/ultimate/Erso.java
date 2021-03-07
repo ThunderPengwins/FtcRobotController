@@ -1,6 +1,10 @@
 package org.firstinspires.ftc.teamcode.ultimate;
 
+import com.acmerobotics.dashboard.FtcDashboard;
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+
+import org.opencv.core.Point;
 
 @TeleOp(name = "Erso", group = "test")
 public class Erso extends jeremy{
@@ -9,27 +13,36 @@ public class Erso extends jeremy{
         //
         InitNoOpen();
         //
-        int startX = wobble.getCurrentPosition();
-        int startY = YEncoder.getCurrentPosition();
+        FtcDashboard dashboard = FtcDashboard.getInstance();
+        TelemetryPacket packet = new TelemetryPacket();
         //
-        int lastX = wobble.getCurrentPosition();
-        int lastY = YEncoder.getCurrentPosition();
+        int startX = xEnc.getCurrentPosition();
+        int startYLeft = yEncLeft.getCurrentPosition();
+        //int startYRight = yEncRight.getCurrentPosition();
+        double startAngle = getRawGyro();
+        //
+        int lastX = xEnc.getCurrentPosition();
+        int lastYLeft = yEncLeft.getCurrentPosition();
+        int lastYRight = yEncRight.getCurrentPosition();
         int curX = lastX;
-        int curY = lastY;
+        int curYLeft = lastYLeft;
+        //int curYRight = lastYRight;
         //
-        double origin = getAngle();
-        double lastAngle = origin;
+        //double origin = getAngle();
+        double curAngle = getAngle();
+        double lastAngle = curAngle;
         //
-        double xPos = 0;
-        double yPos = 0;
+        double xPos = (FIELD_DIM_DIG / 2) - (ROBOT_WIDTH / 2);
+        double yPos = (FIELD_DIM_DIG / -2) + (ROBOT_LENGTH / 2);
         //
+        packet.put("Initialization", "complete");
+        dashboard.sendTelemetryPacket(packet);
         waitForStartify();
         //
         while(opModeIsActive()){
             //
             if (gamepad1.a){
-                origin = getAngle();
-                //orchosen = true;
+                origin = getRawGyro();
             }
             //
             leftx = gamepad1.left_stick_x;
@@ -39,28 +52,35 @@ public class Erso extends jeremy{
             fullBaby(leftx, lefty, rightx, 0.5, 1.0);
             //
             lastX = curX;
-            lastY = curY;
-            lastAngle = getAngle();
-            curX = wobble.getCurrentPosition();
-            curY = YEncoder.getCurrentPosition();
+            lastYLeft = curYLeft;
+            //lastYRight = curYRight;
+            lastAngle = curAngle;//store old values
             //
-            xPos += getXOdometry(curX - lastX, curY - lastY, lastAngle, origin);
-            yPos += getYOdometry(curX - lastX, curY - lastY, lastAngle, origin);
+            curX = xEnc.getCurrentPosition();
+            curYLeft = yEncLeft.getCurrentPosition();
+            //curYRight = yEncRight.getCurrentPosition();
+            curAngle = getAngle();//retrieve new values
             //
-            telemetry.addData("xPos", xPos);
-            telemetry.addData("yPos", yPos);
-            telemetry.addData("X change", getXOdometry(curX - lastX, curY - lastY, lastAngle, origin));
-            telemetry.addData("Y change", getYOdometry(curX - lastX, curY - lastY, lastAngle, origin));
-            //telemetry.addData("X Encoder", curX);
-            //telemetry.addData("Y Encoder", curY);
-            telemetry.addData("Angle", fixAngle(getAngle() - origin));
-            telemetry.addData("X Inch Input", (curX - startX) / oconv);
-            telemetry.addData("Turn Inches", getTurnInches(oxOffset, fixAngle(getAngle() - origin)));
-            telemetry.addData("X offset", ((curX - startX) / oconv) - getTurnInches(oxOffset, getTurnInches(oxOffset, fixAngle(getAngle() - origin))));
-            //telemetry.addData("Y offset", ((curY - startY) / oconv) - getTurnInches(oyOffset, getTurnInches(oyOffset, fixAngle(getAngle() - origin))));
-            //telemetry.addData("Total displacement", getOdoData(curX - startX, curY - startY, origin)[0]);
-            //telemetry.addData("Displacement angle", getOdoData(curX - startX, curY - startY, origin)[1]);
-            telemetry.update();
+            xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, curAngle);
+            yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, curAngle);//run algorithm
+            //
+            packet = new TelemetryPacket();
+            //
+            packet.fieldOverlay()
+                    /*.setStroke("red")
+                    .strokePolygon(rotateRobot(xPos, yPos, curAngle)[1], rotateRobot(xPos, yPos, curAngle)[0])*/
+                    .setStroke("black")
+                    .fillRect(fUnits(FIELD_DIM_DIG / -2),fUnits(FIELD_DIM_DIG / 6),fUnits(FIELD_DIM_DIG),2);
+            rotRect(packet, xPos, yPos, ROBOT_WIDTH, ROBOT_LENGTH, curAngle, "red");
+            rotRect(packet, xPos + (Math.sin(Math.toRadians(curAngle)) * ((ROBOT_LENGTH / 2) - 1)), yPos + (Math.cos(Math.toRadians(curAngle)) * ((ROBOT_LENGTH / 2) - 1)), ROBOT_WIDTH, 2, curAngle, "blue");
+            //
+            packet.put("angle", curAngle);
+            packet.put("xPos", xPos);
+            packet.put("yPos", yPos);
+            packet.put("curX", curX);
+            packet.put("curYLeft", curYLeft);
+            //packet.put("curYRight", curYRight);
+            dashboard.sendTelemetryPacket(packet);
             //
         }
         //

@@ -17,6 +17,8 @@ public class Chewy extends jeremy {
         //
         Init();
         //
+        origin = getRawGyro();
+        //
         feed.setPosition(FEEDPULL);
         //
         /*int ringNum = getRings();

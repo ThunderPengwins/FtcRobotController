@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.ultimate;
 
+import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -36,9 +37,6 @@ import org.openftc.easyopencv.OpenCvCameraRotation;
 import org.openftc.easyopencv.OpenCvPipeline;
 import org.openftc.revextensions2.ExpansionHubEx;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -57,8 +55,9 @@ public abstract class jeremy extends LinearOpMode {
     DcMotor intake;
     DcMotor launcher;
     DcMotor wobble;//also X Encoder
-    //
-    DcMotor YEncoder;
+    DcMotor xEnc;
+    DcMotor yEncLeft;
+    DcMotor yEncRight;
     //
     Servo feed;
     Servo keeper;
@@ -68,8 +67,8 @@ public abstract class jeremy extends LinearOpMode {
     DistanceSensor frontJS;
     DistanceSensor leftJS;
     DistanceSensor rightJS;
-    DistanceSensor oleftJS;
-    DistanceSensor orightJS;
+    //DistanceSensor oleftJS;
+    //DistanceSensor orightJS;
     Double fJSlast;
     Double lJSlast;
     Double olJSlast;
@@ -90,7 +89,7 @@ public abstract class jeremy extends LinearOpMode {
     BNO055IMU imu;
     Orientation angles;
     Acceleration gravity;
-    Float origin = 0F;
+    static Float origin = 0F;
     //Double angle = 0.0;
     //
     OpenCvCamera webcam;
@@ -142,7 +141,7 @@ public abstract class jeremy extends LinearOpMode {
     Boolean arrowPressed = false;
     //
     Double launcherPower = 0.925;
-    Double psLauncherPower = 0.85;
+    Double psLauncherPower = 0.8;
     Boolean laucherToggle = false;
     Boolean togglePressed = false;
     Boolean psTogglePressed = false;
@@ -162,7 +161,14 @@ public abstract class jeremy extends LinearOpMode {
     Double obias = 1.85;
     Double tbias = 0.72876;
     //
+    final static Double ROBOT_WIDTH = 17.5;//in inches
+    final static Double ROBOT_LENGTH = 17.0;//in inches
+    //
+    final static Double FIELD_DIM_REAL = 144.0;
+    final static Double FIELD_DIM_DIG = 153.0;
+    //
     Double oconv = ocpi * obias;//odometry conversion
+    Double oconvCan = FIELD_DIM_REAL / FIELD_DIM_DIG;
     //
     Double oxOffset = 5.5;//positive is number of inches right from center
     Double oyOffset = -6.25 * 0.6842;//positive is number of inches forward from center, second number is y turn bias
@@ -195,7 +201,7 @@ public abstract class jeremy extends LinearOpMode {
         initGyro();
         initOpen();
         //
-        if(expansionHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.9) {
+        if(expansionHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.5) {
             controlHub.setLedColor(0, 255, 0);
             expansionHub.setLedColor(0, 255, 0);
             //
@@ -253,7 +259,9 @@ public abstract class jeremy extends LinearOpMode {
         intake = hardwareMap.dcMotor.get("intake");
         launcher = hardwareMap.dcMotor.get("launcher");
         wobble = hardwareMap.dcMotor.get("wobble");
-        YEncoder = hardwareMap.dcMotor.get("yencoder");
+        xEnc = hardwareMap.dcMotor.get("wobble");
+        yEncLeft = hardwareMap.dcMotor.get("yenc");
+        yEncRight = hardwareMap.dcMotor.get("launcher");
         //
         feed = hardwareMap.servo.get("feed");
         keeper = hardwareMap.servo.get("keeper");
@@ -261,8 +269,8 @@ public abstract class jeremy extends LinearOpMode {
         intakefeed = hardwareMap.crservo.get("intakefeed");
         //
         intake.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-        //wobble.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        YEncoder.setDirection(DcMotorSimple.Direction.REVERSE);
+        wobble.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        yEncLeft.setDirection(DcMotorSimple.Direction.REVERSE);
         //
         MotorConfigurationType motorConfigurationType = launcher.getMotorType().clone();
         motorConfigurationType.setAchieveableMaxRPMFraction(1.0);
@@ -276,8 +284,8 @@ public abstract class jeremy extends LinearOpMode {
         //test = hardwareMap.get(DistanceSensor.class, "test");
         frontJS = hardwareMap.get(DistanceSensor.class, "frontjs");
         leftJS = hardwareMap.get(DistanceSensor.class, "leftjs");
-        oleftJS = hardwareMap.get(DistanceSensor.class, "oleftjs");
-        orightJS = hardwareMap.get(DistanceSensor.class, "orightjs");
+        //oleftJS = hardwareMap.get(DistanceSensor.class, "oleftjs");
+        //orightJS = hardwareMap.get(DistanceSensor.class, "orightjs");
         rightJS = hardwareMap.get(DistanceSensor.class, "rightjs");
         fJSlast = frontJS.getDistance(DistanceUnit.INCH);
         tape = hardwareMap.get(ColorSensor.class, "tape");
@@ -330,7 +338,7 @@ public abstract class jeremy extends LinearOpMode {
         telemetry.update();
         imu.initialize(parameters);
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        origin = -angles.firstAngle;
+        //origin = -angles.firstAngle;
         telemetry.addData("imu initiated", "");
         telemetry.addData("Angle",getAngle());
         telemetry.update();
@@ -415,7 +423,7 @@ public abstract class jeremy extends LinearOpMode {
             aWheelsPower = 0;
             bWheelsPower = 0;
         } else {
-            double angle = calcHoloAngle(x, y, total);//calculate angle of joystick
+            double angle = inverseTrigGyro(x, y, total);//calculate angle of joystick
             //
             double calc = cyaw - ayaw;
             calc = fixAngle(calc);
@@ -444,7 +452,7 @@ public abstract class jeremy extends LinearOpMode {
         //double total = pythagorus(y, x);//find total power
         double total = 1;
         //
-        double angle = calcHoloAngle(x, y, total);//calculate angle of joystick
+        double angle = inverseTrigGyro(x, y, total);//calculate angle of joystick
         //
         double aWheelsPower = Math.cos(angle * Math.PI / 180);
         double bWheelsPower = Math.sin(angle * Math.PI / 180);//find power for a/b motors
@@ -473,7 +481,7 @@ public abstract class jeremy extends LinearOpMode {
             aWheelsPower = 0;
             bWheelsPower = 0;
         } else {
-            double h = calcHoloAngle(x, y, total);//calculate angle of joystick
+            double h = inverseTrigGyro(x, y, total);//calculate angle of joystick
             loctarang = h;
             //
             double g = h + cang;
@@ -517,7 +525,7 @@ public abstract class jeremy extends LinearOpMode {
             aWheelsPower = 0;
             bWheelsPower = 0;
         } else {
-            double h = calcHoloAngle(x, y, total);//calculate angle of joystick
+            double h = inverseTrigGyro(x, y, total);//calculate angle of joystick
             loctarang = h;
             //
             double g = h + cang;
@@ -825,6 +833,55 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
+    public void autoPower(){
+        strafeToPosition(-12, .3);
+        //
+        if(gamepad1.x){
+            return;
+        }
+        turnToAngleError(5.5,.1,2);//first turn (right)
+        if(gamepad1.x){
+            return;
+        }
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        launcher.setPower(.81);
+        //
+        feed.setPosition(FEEDPULL);
+        //
+        if(gamepad1.x){
+            return;
+        }
+        turnToAngleError(0, .1,2);//second turn (middle)
+        if(gamepad1.x){
+            return;
+        }
+        sleep(500);
+        if(gamepad1.x){
+            return;
+        }
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        launcher.setPower(.815);
+        //
+        feed.setPosition(FEEDPULL);
+        //
+        if(gamepad1.x){
+            return;
+        }
+        turnToAngleError(-6,.1,2);//last turn (left)
+        if(gamepad1.x){
+            return;
+        }
+        sleep(500);
+        feed.setPosition(FEEDPUSH);
+        if(gamepad1.x){
+            return;
+        }
+        sleep(1000);
+        launcher.setPower(0);
+        feed.setPosition(FEEDPULL);
+    }
     //</editor-fold>
     //
     //<editor-fold desc="Autonomous">
@@ -1112,9 +1169,7 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public void turnToAngle(double angle, double speed){
-        //
-        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        double current = -angles.firstAngle;
+        double current = getAngle();
         //
         if (current > angle){
             turnWithEncoder(-speed);
@@ -1123,8 +1178,7 @@ public abstract class jeremy extends LinearOpMode {
         }
         //
         while (!(angle - 5 < current && current < angle + 5)){
-            angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-            current = -angles.firstAngle;
+            current = getAngle();
             /*telemetry.addData("Target",angle);
             telemetry.addData("Current",current);
             telemetry.update();*/
@@ -1673,9 +1727,9 @@ public abstract class jeremy extends LinearOpMode {
     //</editor-fold>
     //
     //<editor-fold desc="Operations">
-    public double getXOdometry(double xWheel, double yWheel, double lastAngle, double origin){
+    public double getXOdometry(double xWheel, double yWheel, double lastAngle, double curAngle){
         //
-        double[] storeOdo = getOdoData(xWheel, yWheel, lastAngle, origin);//calc hypotenuse and global angle
+        double[] storeOdo = getOdoData(xWheel, yWheel, lastAngle, curAngle);//calc hypotenuse and global angle
         //
         double total = storeOdo[0];//get hypotenuse/magnitude of offset
         double aGlob = storeOdo[1];//get global angle
@@ -1687,9 +1741,9 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
-    public double getYOdometry(double xWheel, double yWheel, double lastAngle, double origin){
+    public double getYOdometry(double xWheel, double yWheel, double lastAngle, double curAngle){
         //
-        double[] storeOdo = getOdoData(xWheel, yWheel, lastAngle,origin);//calc hypotenuse and global angle
+        double[] storeOdo = getOdoData(xWheel, yWheel, lastAngle, curAngle);//calc hypotenuse and global angle
         //
         double total = storeOdo[0];//get hypotenuse/magnitude of offset
         double aGlob = storeOdo[1];//get global angle
@@ -1701,15 +1755,15 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
-    public double[] getOdoData(double xWheel, double yWheel, double lastAngle, double origin){
-        double cang = fixAngle(getAngle() - lastAngle);//find change in angle
-        double gRot = fixAngle(getAngle() - origin);
+    public double[] getOdoData(double xWheel, double yWheel, double lastAngle, double curAngle){
+        double cang = fixAngle(curAngle - lastAngle);//find change in angle
+        double gRot = fixAngle(curAngle);
         //
         double xLoc = (xWheel / oconv) - getTurnInches(oxOffset, cang);//find x change in inches
         double yLoc = (yWheel / oconv) - getTurnInches(oyOffset, cang);//find y change in inches
         //
         double total = pythagorus(xLoc, yLoc);//get hypotenuse/magnitude of movement
-        double aLoc = calcHoloAngle(xLoc, yLoc, total);//find local angle of movement
+        double aLoc = inverseTrigGyro(xLoc, yLoc, total);//find local angle of movement
         //
         double aGlob = aLoc + gRot;//adjust movement angle for global
         //
@@ -1793,22 +1847,16 @@ public abstract class jeremy extends LinearOpMode {
     //
     public double getAngle(){
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        return -angles.firstAngle - origin;
+        return fixAngle(-angles.firstAngle - origin);
+    }
+    //
+    public Float getRawGyro(){
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        return -angles.firstAngle;
     }
     //
     public double pythagorus(double a, double b){
         return Math.sqrt(Math.pow(a, 2) + Math.pow(b, 2));
-    }
-    //
-    public double calcHoloAngle(double x, double y, double total){
-        double angle;
-        if(y > 0){
-            angle = Math.acos(x / total) * 180 / Math.PI;
-        }else {
-            angle = 360 - (Math.acos(x / total) * 180 / Math.PI);
-        }
-        angle -= 90;
-        return -fixAngle(angle);
     }
     //
     public double fixAngle(double angle){
@@ -1827,6 +1875,28 @@ public abstract class jeremy extends LinearOpMode {
             angle += 360;
         }
         return angle;
+    }
+    //
+    public double inverseTrigMath(double x, double y, double h){
+        double theta;
+        double angleCore = Math.toDegrees(Math.acos(x / h));
+        if(y > 0){
+            theta = angleCore;
+        }else{
+            theta = -angleCore + 360;
+        }
+        return theta;
+    }
+    //
+    public double inverseTrigGyro(double x, double y, double h){
+        double theta;
+        double angleCore = Math.toDegrees(Math.asin(x / h));
+        if(y > 0){
+            theta = angleCore;//uses arc sine because angle comes from the top rather than the side
+        }else{
+            theta = -angleCore + 180;
+        }
+        return theta;
     }
     //
     public boolean inBounds(double target, double error){
@@ -1876,7 +1946,6 @@ public abstract class jeremy extends LinearOpMode {
             return olJSlast;
         }
     }
-    //
     public double filterrJS(double input){
         if(input < 100){
             rJSlast = input;
@@ -1899,4 +1968,66 @@ public abstract class jeremy extends LinearOpMode {
         origin = -angles.firstAngle;
     }
     //</editor-fold>
+    //
+    public double fUnits(double inches){
+        return inches * oconvCan;
+    }
+    //
+    public Point rotatePoint(Point input, double angle){
+        //
+        double h = pythagorus(input.x, input.y);
+        double a = inverseTrigMath(input.x, input.y, h);
+        //
+        double b = a - angle;//because gyro angle is opposite of mathematical angle
+        //
+        Point result = new Point(h * Math.cos(Math.toRadians(b)),h * Math.sin(Math.toRadians(b)));
+        return result;
+    }
+    //
+    public double[][] rotateRobot(double xPos, double yPos, double angle){
+        //
+        double w2 = ROBOT_WIDTH / 2;
+        double l2 = ROBOT_LENGTH / 2;
+        //
+        double[] xCoords = {-w2, w2, w2, -w2};//unturned x coords
+        double[] yCoords = {l2, l2, -l2, -l2};//unturned y coords
+        //
+        Point use;
+        for (int i = 0; i < xCoords.length; i++){//loop through every point
+            use = rotatePoint(new Point(xCoords[i], yCoords[i]), angle);//rotate point
+            xCoords[i] = -fUnits(use.x + xPos);//convert to canvas coordinates & store in arrays
+            yCoords[i] = fUnits(use.y + yPos);
+        }
+        //
+        double[][] store = {xCoords, yCoords};
+        return store;
+    }
+    //
+    public void rotRect(TelemetryPacket packet, double xPos, double yPos, double width, double length, double angle, String color){
+        //
+        double w2 = width / 2;
+        double l2 = length / 2;
+        //
+        double[] xCoords = {-w2, w2, w2, -w2};//unturned x coords
+        double[] yCoords = {l2, l2, -l2, -l2};//unturned y coords
+        //
+        Point use;
+        for (int i = 0; i < xCoords.length; i++){//loop through every point
+            use = rotatePoint(new Point(xCoords[i], yCoords[i]), angle);//rotate point
+            xCoords[i] = -fUnits(use.x + xPos);//convert to canvas coordinates & store in arrays
+            yCoords[i] = fUnits(use.y + yPos);
+        }
+        //
+        packet.fieldOverlay()
+                .setStroke(color)
+                .strokePolygon(yCoords, xCoords);
+    }
+    //
+    public double getMidRotDist(double width, double length, double angle){
+        return pythagorus(width / 2, length / 2) * Math.sin(angle + inverseTrigGyro(width, length, pythagorus(width, length)));
+    }
+    //
+    public void wallTouchCorrect(){
+        //
+    }
 }

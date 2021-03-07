@@ -33,15 +33,13 @@ public class Luke extends jeremy {
     double ayaw = 0;
     boolean moveTurning = false;
     //
-    double origin = 0;
-    //
-    Long time = System.currentTimeMillis();
+    //Long time = System.currentTimeMillis();
     //
     public void runOpMode() {
         //
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         //
-        Init();
+        InitNoOpen();
         //
         //backRight.setDirection(DcMotorSimple.Direction.FORWARD);
         //
@@ -50,13 +48,6 @@ public class Luke extends jeremy {
         waitForStartify();
         //
         while (opModeIsActive()){
-            //
-            //angle = getAngle();
-            //
-            if (gamepad1.a){
-                origin = getAngle();
-                //orchosen = true;
-            }
             //
             leftx = gamepad1.left_stick_x;
             lefty = -gamepad1.left_stick_y;
@@ -84,13 +75,14 @@ public class Luke extends jeremy {
             //
             if(gamepad1.left_trigger > 0){//strafe for power shot
                 //turnToAngle(-8, .3);
-                launcher.setPower(.85);
+                launcher.setPower(psLauncherPower);
                 strafeToPosition(-7.5, .3);
+                motorsWithEncoders();
             }
-            if(firstdRight && !fdrightpressed){
+            if(gamepad1.right_stick_button && !fdrightpressed){
                 turnToAngle(0, .3);
                 fdrightpressed = true;
-            }else if(!firstdRight && fdrightpressed){
+            }else if(!gamepad1.right_stick_button && fdrightpressed){
                 fdrightpressed = false;
             }
             //
@@ -112,8 +104,12 @@ public class Luke extends jeremy {
             //
             runTaper(firstdDown);
             //
-            telemetry.addData("Loop speed", System.currentTimeMillis() - time);
-            telemetry.addData("tape mode", tapeMode);
+            /*if(gamepad1.x){
+                autoPower();
+            }*/
+            //
+            //telemetry.addData("Loop speed", System.currentTimeMillis() - time);
+            /*telemetry.addData("tape mode", tapeMode);
             telemetry.addData("red value", tape.red());
             telemetry.addData("angle", getAngle());
             telemetry.addData("frontJS", filterfJS(frontJS.getDistance(DistanceUnit.INCH)));
@@ -129,9 +125,11 @@ public class Luke extends jeremy {
             telemetry.addData("Intakefeed running", intakeFeederRunning);
             telemetry.addData("Intakefeed power", intakeFeederPower);
             telemetry.addData("Wobble up", wobbleUp.getState());
-            telemetry.addData("Keeper position", keeper.getPosition());
+            telemetry.addData("Keeper position", keeper.getPosition());*/
+            telemetry.addData("Launcher power", Math.round(1000 * launcherPower) / 10 + "%");
+            telemetry.addData("angle", getAngle());
             telemetry.update();
-            time = System.currentTimeMillis();
+            //time = System.currentTimeMillis();
         }
         //
     }

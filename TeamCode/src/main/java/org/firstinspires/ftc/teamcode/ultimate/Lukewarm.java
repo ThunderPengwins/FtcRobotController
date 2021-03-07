@@ -7,6 +7,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 import org.openftc.revextensions2.ExpansionHubEx;
+import org.openftc.revextensions2.RevBulkData;
 
 @TeleOp(name = "Lukewarm", group = "test")
 public class Lukewarm extends jeremy {
@@ -37,6 +38,8 @@ public class Lukewarm extends jeremy {
     double origin = 0;
     //
     Long time = System.currentTimeMillis();
+    //
+    RevBulkData bulkData;
     //
     public void runOpMode() {
         //

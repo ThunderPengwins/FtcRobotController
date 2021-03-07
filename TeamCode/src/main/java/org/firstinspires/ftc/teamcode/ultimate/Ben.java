@@ -17,19 +17,30 @@ public class Ben extends jeremy{
         packet.put("Initialization", "In progress...");
         dashboard.sendTelemetryPacket(packet);
         Init();
-        packet.put("Initialization","Complete");
+        //
+        origin = getRawGyro();
+        //
+        packet.put("Initialization","Systems ready...");
         dashboard.sendTelemetryPacket(packet);
         //
         feed.setPosition(FEEDPULL);
         //
-        waitForStartify();
-        //
         int ringNum = getRings();
+        packet.put("Initialization","Stabilizing OpenCV...");
+        dashboard.sendTelemetryPacket(packet);
+        sleep(1000);
         for (int n = 0; n < 10; n++){
             ringNum = getRings();
+            packet.put("Initialization","Stabilizing OpenCV...");
+            packet.put("rings", ringNum);
+            dashboard.sendTelemetryPacket(packet);
+            sleep(100);
         }
+        packet.put("Initialization","Complete!");
         packet.put("rings", ringNum);
         dashboard.sendTelemetryPacket(packet);
+        //
+        waitForStartify();
         //
         moveToPosition(55,.3);
         //
@@ -140,17 +151,17 @@ public class Ben extends jeremy{
             sleep(1000);
             //
             feed.setPosition(FEEDPUSH);
-            sleep(1000);
+            sleep(500);
             feed.setPosition(FEEDPULL);
-            sleep(1000);
+            sleep(500);
             feed.setPosition(FEEDPUSH);
             sleep(1000);
             launcher.setPower(0);
             feed.setPosition(FEEDPULL);
             //
-            turnToAngle(-130, .8);
+            turnToAngle(-120, 1);
             //
-            moveToPosition(-12, .6);
+            moveToPosition(-12, .8);
             //
             keeper.setPosition(0);//set open
             kelper.setPosition(1);
@@ -176,7 +187,7 @@ public class Ben extends jeremy{
             //
             turnToAngleError(8, .5, 5);
             //
-            moveToPosition(-40, .6);
+            moveToPosition(-39, .6);
             //
             keeper.setPosition(1);//set closed
             kelper.setPosition(0);
@@ -186,13 +197,19 @@ public class Ben extends jeremy{
             //
             moveToPosition(80, .7);
             //
-            turnWithGyro(220, .5);
+            turnWithGyro(100, -.5);
             //
             keeper.setPosition(0);//set open
             kelper.setPosition(1);
             sleep(500);
             //
-            moveToPosition(35, .5);
+            moveToPosition(10, .8);
+            //
+            turnWithGyro(30, -.6);
+            //
+            moveToPosition(20, .8);
+            //
+            //moveToPosition(35, .5);
         }
         //
         //moveToPosition(10,.7);
