@@ -1980,8 +1980,7 @@ public abstract class jeremy extends LinearOpMode {
         //
         double b = a - angle;//because gyro angle is opposite of mathematical angle
         //
-        Point result = new Point(h * Math.cos(Math.toRadians(b)),h * Math.sin(Math.toRadians(b)));
-        return result;
+        return new Point(h * Math.cos(Math.toRadians(b)),h * Math.sin(Math.toRadians(b)));
     }
     //
     public double[][] rotateRobot(double xPos, double yPos, double angle){
@@ -1999,8 +1998,7 @@ public abstract class jeremy extends LinearOpMode {
             yCoords[i] = fUnits(use.y + yPos);
         }
         //
-        double[][] store = {xCoords, yCoords};
-        return store;
+        return new double[][]{xCoords, yCoords};
     }
     //
     public void rotRect(TelemetryPacket packet, double xPos, double yPos, double width, double length, double angle, String color){
@@ -2027,7 +2025,28 @@ public abstract class jeremy extends LinearOpMode {
         return pythagorus(width / 2, length / 2) * Math.sin(angle + inverseTrigGyro(width, length, pythagorus(width, length)));
     }
     //
-    public void wallTouchCorrect(){
+    public double[] wallTouchCorrect(double xPos, double yPos, double angle){
         //
+        double g1 = getMidRotDist(ROBOT_WIDTH, ROBOT_LENGTH, angle);//calculate both distances to the midpoint of a rotated rectangle
+        double g2 = getMidRotDist(ROBOT_WIDTH, ROBOT_LENGTH, -angle);//the longer distance will be longer in all directions
+        //
+        double g3;
+        if(g1 > g2){//find the longer distance to the midpoint
+            g3 = g1;
+        }else{
+            g3 = g1;
+        }
+        //
+        if(xPos + g3 > FIELD_DIM_REAL / 2){//check positive x breach
+            xPos = FIELD_DIM_REAL / 2 - g3;
+        }else if (xPos - g3 < FIELD_DIM_REAL / -2){//check negative x breach
+            xPos = FIELD_DIM_REAL / -2 + g3;
+        }
+        if(yPos + g3 > FIELD_DIM_REAL / 2){//check positive y breach
+            yPos = FIELD_DIM_REAL / 2 - g3;
+        }else if(yPos - g3 < FIELD_DIM_REAL / -2){//check negative breach
+            yPos = FIELD_DIM_REAL / -2 + g3;
+        }
+        return new double[]{xPos, yPos};
     }
 }

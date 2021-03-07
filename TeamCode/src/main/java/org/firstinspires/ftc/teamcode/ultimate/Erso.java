@@ -35,6 +35,8 @@ public class Erso extends jeremy{
         double xPos = (FIELD_DIM_DIG / 2) - (ROBOT_WIDTH / 2);
         double yPos = (FIELD_DIM_DIG / -2) + (ROBOT_LENGTH / 2);
         //
+        double[] correction;
+        //
         packet.put("Initialization", "complete");
         dashboard.sendTelemetryPacket(packet);
         waitForStartify();
@@ -63,6 +65,10 @@ public class Erso extends jeremy{
             //
             xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, curAngle);
             yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, curAngle);//run algorithm
+            //
+            correction = wallTouchCorrect(xPos, yPos, curAngle);//if running against a wall, use to correct position
+            xPos = correction[0];
+            yPos = correction[1];
             //
             packet = new TelemetryPacket();
             //
