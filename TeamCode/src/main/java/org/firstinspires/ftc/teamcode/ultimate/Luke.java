@@ -17,6 +17,7 @@ public class Luke extends jeremy {
     boolean yButton;
     boolean xButton;
     boolean oyButton;
+    boolean oxButton;
     boolean dUp;
     boolean dDown;
     boolean leftBumper;
@@ -58,6 +59,7 @@ public class Luke extends jeremy {
             yButton = gamepad1.y;
             xButton = gamepad2.x;
             oyButton = gamepad2.y;
+            oxButton = gamepad1.x;
             dUp = gamepad2.dpad_up;
             dDown = gamepad2.dpad_down;
             leftBumper = gamepad2.left_bumper;//gamepad 2
@@ -79,6 +81,11 @@ public class Luke extends jeremy {
                 strafeToPosition(-7.5, .3);
                 motorsWithEncoders();
             }
+            //
+            if(oxButton){
+                powerFromWall(0.3);
+            }
+            //
             if(gamepad1.right_stick_button && !fdrightpressed){
                 turnToAngle(0, .3);
                 fdrightpressed = true;

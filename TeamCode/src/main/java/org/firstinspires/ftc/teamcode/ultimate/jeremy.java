@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.ultimate;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.hardware.bosch.BNO055IMU;
 import com.qualcomm.hardware.bosch.JustLoggingAccelerationIntegrator;
@@ -142,7 +143,7 @@ public abstract class jeremy extends LinearOpMode {
     //
     Double launcherPower = 0.925;
     Double psLauncherPower = 0.8;
-    Boolean laucherToggle = false;
+    Boolean launcherToggle = false;
     Boolean togglePressed = false;
     Boolean psTogglePressed = false;
     //
@@ -169,6 +170,10 @@ public abstract class jeremy extends LinearOpMode {
     //
     Double oconv = ocpi * obias;//odometry conversion
     Double oconvCan = FIELD_DIM_REAL / FIELD_DIM_DIG;
+    //
+    public Double xPos = 0.0;
+    public Double yPos = 0.0;
+    public Double gcAngle = 0.0;
     //
     Double oxOffset = 5.5;//positive is number of inches right from center
     Double oyOffset = -6.25 * 0.6842;//positive is number of inches forward from center, second number is y turn bias
@@ -229,6 +234,21 @@ public abstract class jeremy extends LinearOpMode {
         setMotorReversals();
         //
         initGyro();
+        //
+        if(expansionHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.5) {
+            controlHub.setLedColor(0, 255, 0);
+            expansionHub.setLedColor(0, 255, 0);
+            //
+            telemetry.addData("Initialization", "complete");
+            telemetry.update();
+        }else{
+            controlHub.setLedColor(255, 196, 0);
+            expansionHub.setLedColor(255, 196, 0);
+            //
+            telemetry.addData("Initialization", "complete");
+            telemetry.addData("WARNING", "Battery power low");
+            telemetry.update();
+        }
     }
     //
     public void YodaInit(){
@@ -721,7 +741,7 @@ public abstract class jeremy extends LinearOpMode {
             }else if(launcherPower > 0){
                 launcherPower -= .025;
             }
-            if(laucherToggle) {
+            if(launcherToggle) {
                 launcher.setPower(launcherPower);
             }
         }else if(!dUp && !dDown && arrowPressed){
@@ -729,8 +749,8 @@ public abstract class jeremy extends LinearOpMode {
         }
         //
         if(leftBumper && !togglePressed){
-            laucherToggle = !laucherToggle;
-            if(laucherToggle){
+            launcherToggle = !launcherToggle;
+            if(launcherToggle){
                 launcher.setPower(launcherPower);
             }else{
                 launcher.setPower(0);
@@ -815,7 +835,7 @@ public abstract class jeremy extends LinearOpMode {
                 //}
             }
             //babyTurn(-.2, 1);
-        }else if((/*(tapeSlowTurn &&*/ inBounds(10, 5)/*) || (!tapeSlowTurn && inBounds(10, 10))*/) && tapeMode == 1){
+        }else if((/*(tapeSlowTurn &&*/ angleInBounds(10, 5)/*) || (!tapeSlowTurn && inBounds(10, 10))*/) && tapeMode == 1){
             tapeMode = 2;
             move(0, -1, .4);
             tapeStart = frontLeft.getCurrentPosition();
@@ -1198,7 +1218,7 @@ public abstract class jeremy extends LinearOpMode {
             turnWithEncoder(speed);
         }
         //
-        while (!(inBounds(angle, error)) && opModeIsActive()){
+        while (!(angleInBounds(angle, error)) && opModeIsActive()){
             //angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
             //current = -angles.firstAngle;
             /*telemetry.addData("Target",angle);
@@ -1208,6 +1228,28 @@ public abstract class jeremy extends LinearOpMode {
         still();
         //
     }
+    //
+    /*public void turnToAngleOdo(double angle, double speed, double error){
+        //
+        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+        double current = -angles.firstAngle;
+        //
+        if (current > angle){
+            turnWithEncoder(-speed);
+        }else{
+            turnWithEncoder(speed);
+        }
+        //
+        while (!(inBounds(angle, error)) && opModeIsActive()){
+            //angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
+            //current = -angles.firstAngle;
+            /*telemetry.addData("Target",angle);
+            telemetry.addData("Current",current);
+            telemetry.update();
+        }
+        still();
+        //
+    }*/
     //
     public void turnPast(double angle, double speed, boolean right){
         //
@@ -1298,6 +1340,230 @@ public abstract class jeremy extends LinearOpMode {
         }*/
         still();
         return;
+    }
+    //
+    public void odoYToPosition(FtcDashboard dashboard, TelemetryPacket packet, double yCoord, double speed){
+        int curX = xEnc.getCurrentPosition();
+        int curYLeft = yEncLeft.getCurrentPosition();
+        //int curYRight = lastYRight;
+        //
+        int[] storeEncs;
+        //
+        if(yPos < yCoord) {//go forward
+            frontLeft.setPower(speed);
+            backLeft.setPower(speed);
+            frontRight.setPower(speed);
+            backRight.setPower(speed);
+            //
+            while(yPos < yCoord && opModeIsActive()){
+                storeEncs = updateOdo(dashboard, packet, curX, curYLeft);
+                curX = storeEncs[0];
+                curYLeft = storeEncs[1];
+                //sleep(100);
+            }
+            //
+            still();
+            //
+        }else{//go back
+            frontLeft.setPower(-speed);
+            backLeft.setPower(-speed);
+            frontRight.setPower(-speed);
+            backRight.setPower(-speed);
+            //
+            while(yPos > yCoord && opModeIsActive()){
+                storeEncs = updateOdo(dashboard, packet, curX, curYLeft);
+                curX = storeEncs[0];
+                curYLeft = storeEncs[1];
+                //sleep(100);
+            }
+            //
+            still();
+        }
+    }
+    //
+    public void odoXToPosition(FtcDashboard dashboard, TelemetryPacket packet, double xCoord, double speed){
+        int curX = xEnc.getCurrentPosition();
+        int curYLeft = yEncLeft.getCurrentPosition();
+        //int curYRight = lastYRight;
+        //
+        double lastAngle;
+        //
+        int[] storeEncs;
+        //
+        if(xPos < xCoord) {//go right
+            frontLeft.setPower(speed);
+            backLeft.setPower(-speed);
+            frontRight.setPower(-speed);
+            backRight.setPower(speed);
+            //
+            while(xPos < xCoord && opModeIsActive()){
+                storeEncs = updateOdo(dashboard, packet, curX, curYLeft);
+                curX = storeEncs[0];
+                curYLeft = storeEncs[1];
+            }
+            //
+            still();
+            //
+        }else{//go left
+            frontLeft.setPower(-speed);
+            backLeft.setPower(speed);
+            frontRight.setPower(speed);
+            backRight.setPower(-speed);
+            //
+            while(xPos > xCoord && opModeIsActive()){
+                storeEncs = updateOdo(dashboard, packet, curX, curYLeft);
+                curX = storeEncs[0];
+                curYLeft = storeEncs[1];
+            }
+            //
+            still();
+        }
+    }
+    //
+    public void powerFromCorner(double speed){
+        //
+        int lastX = xEnc.getCurrentPosition();
+        int lastYLeft = yEncLeft.getCurrentPosition();
+        int curX = lastX;
+        int curYLeft = lastYLeft;
+        //
+        origin = getRawGyro();
+        gcAngle = getAngle();
+        double lastAngle = gcAngle;
+        //
+        xPos = (FIELD_DIM_DIG / 2) - (ROBOT_WIDTH / 2) - 10;//-10 is temporary
+        yPos = (FIELD_DIM_DIG / -2) + (ROBOT_LENGTH / 2) - 10;
+        //
+        motorsToPosition();
+        moveToPosition(10, .3);
+        strafeToPosition(-10, .3);
+        motorsWithEncoders();
+        //
+        frontLeft.setPower(speed);
+        backLeft.setPower(speed);
+        frontRight.setPower(speed);
+        backRight.setPower(speed);
+        //
+        while (!inBounds(yPos, -12, 4) && opModeIsActive()) {
+            lastX = curX;
+            lastYLeft = curYLeft;
+            lastAngle = gcAngle;//store old values
+            //
+            curX = xEnc.getCurrentPosition();
+            curYLeft = yEncLeft.getCurrentPosition();
+            gcAngle = getAngle();//retrieve new values
+            //
+            xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
+            yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
+            telemetry.addData("yPos", yPos);
+            telemetry.update();
+        }
+        still();
+        //
+        sleep(500);
+        //
+        frontLeft.setPower(-speed);
+        backLeft.setPower(speed);
+        frontRight.setPower(speed);
+        backRight.setPower(-speed);
+        //
+        while (!inBounds(xPos, 0, 3) && opModeIsActive()){
+            lastX = curX;
+            lastYLeft = curYLeft;
+            lastAngle = gcAngle;//store old values
+            //
+            curX = xEnc.getCurrentPosition();
+            curYLeft = yEncLeft.getCurrentPosition();
+            gcAngle = getAngle();//retrieve new values
+            //
+            xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
+            yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
+            telemetry.addData("xPos", xPos);
+            telemetry.update();
+        }
+        still();
+        //
+        turnToAngleError(15, .1, 3);
+        //
+    }
+    //
+    public void powerFromWall(double speed){
+        //
+        frontLeft.setPower(-speed);
+        backLeft.setPower(-speed);
+        frontRight.setPower(-speed);
+        backRight.setPower(-speed);
+        //
+        double startPos = frontLeft.getCurrentPosition();
+        //
+        while (tape.red() < 80 && opModeIsActive() && ((startPos - frontLeft.getCurrentPosition()) / conversion < 30)){}
+        still();
+        //
+        if((startPos - frontLeft.getCurrentPosition()) / conversion > 30){
+            return;
+        }
+        //
+        int lastX = xEnc.getCurrentPosition();//set odo values
+        int lastYLeft = yEncLeft.getCurrentPosition();
+        int curX = lastX;
+        int curYLeft = lastYLeft;
+        //
+        origin = getRawGyro();
+        gcAngle = getAngle();
+        double lastAngle = gcAngle;
+        //
+        xPos = 0.0;//set coordinates to (0,0)
+        yPos = 0.0;
+        //
+        moveToPosition(-3, .3);
+        motorsWithEncoders();
+        //
+        frontLeft.setPower(speed);
+        backLeft.setPower(-speed);
+        frontRight.setPower(-speed);
+        backRight.setPower(speed);
+        //
+        launcher.setPower(.825);
+        //
+        while (!inBounds(xPos, 20, 3) && opModeIsActive()){
+            lastX = curX;
+            lastYLeft = curYLeft;
+            lastAngle = gcAngle;//store old values
+            //
+            curX = xEnc.getCurrentPosition();
+            curYLeft = yEncLeft.getCurrentPosition();
+            gcAngle = getAngle();//retrieve new values
+            //
+            xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
+            yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
+            telemetry.addData("xPos", xPos);
+            telemetry.update();
+        }
+        still();
+        //
+        turnToAngleError(5.5,.1,4);//first turn (right)
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        launcher.setPower(.805);
+        //
+        feed.setPosition(FEEDPULL);
+        //
+        turnToAngleError(-1, .1,2);//second turn (middle)
+        sleep(500);
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        launcher.setPower(.81);
+        //
+        feed.setPosition(FEEDPULL);
+        //
+        turnToAngleError(-6,.1,2);//last turn (left)
+        sleep(500);
+        feed.setPosition(FEEDPUSH);
+        sleep(1000);
+        launcher.setPower(0);
+        //
+        feed.setPosition(FEEDPULL);
+        sleep(1000);
     }
     //</editor-fold>
     //
@@ -1899,7 +2165,7 @@ public abstract class jeremy extends LinearOpMode {
         return theta;
     }
     //
-    public boolean inBounds(double target, double error){
+    public boolean angleInBounds(double target, double error){
         //
         double rB = target + error;
         double lB = target - error;
@@ -1919,6 +2185,10 @@ public abstract class jeremy extends LinearOpMode {
                 return false;
             }
         }
+    }
+    //
+    public boolean inBounds(double value, double target, double error){
+        return (target - error) < value && value < (target + error);
     }
     //
     public double filterfJS(double input){
@@ -1969,6 +2239,43 @@ public abstract class jeremy extends LinearOpMode {
     }
     //</editor-fold>
     //
+    public int[] updateOdo(FtcDashboard dashboard, TelemetryPacket packet, int curX, int curYLeft){
+        //
+        int lastX = curX;
+        int lastYLeft = curYLeft;
+        //lastYRight = curYRight;
+        double lastAngle = gcAngle;//store old values
+        //
+        curX = xEnc.getCurrentPosition();
+        curYLeft = yEncLeft.getCurrentPosition();
+        //curYRight = yEncRight.getCurrentPosition();
+        gcAngle = getAngle();//retrieve new values
+        //
+        xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
+        yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
+        //
+        double[] correction = wallTouchCorrect(xPos, yPos, gcAngle);//if running against a wall, use to correct position
+        xPos = correction[0];
+        yPos = correction[1];
+        //
+        /*packet = new TelemetryPacket();
+        //
+        packet.fieldOverlay()
+                .setStroke("black")
+                .fillRect(fUnits(FIELD_DIM_DIG / -2),fUnits(FIELD_DIM_DIG / 6),fUnits(FIELD_DIM_DIG),2);
+        drawRobot(packet, xPos, yPos, gcAngle);
+        //
+        packet.put("angle", gcAngle);
+        packet.put("xPos", xPos);
+        packet.put("yPos", yPos);
+        packet.put("curX", curX);
+        packet.put("curYLeft", curYLeft);
+        //packet.put("curYRight", curYRight);
+        dashboard.sendTelemetryPacket(packet);*/
+        //
+        return new int[]{curX, curYLeft};
+    }
+    //
     public double fUnits(double inches){
         return inches * oconvCan;
     }
@@ -1983,22 +2290,9 @@ public abstract class jeremy extends LinearOpMode {
         return new Point(h * Math.cos(Math.toRadians(b)),h * Math.sin(Math.toRadians(b)));
     }
     //
-    public double[][] rotateRobot(double xPos, double yPos, double angle){
-        //
-        double w2 = ROBOT_WIDTH / 2;
-        double l2 = ROBOT_LENGTH / 2;
-        //
-        double[] xCoords = {-w2, w2, w2, -w2};//unturned x coords
-        double[] yCoords = {l2, l2, -l2, -l2};//unturned y coords
-        //
-        Point use;
-        for (int i = 0; i < xCoords.length; i++){//loop through every point
-            use = rotatePoint(new Point(xCoords[i], yCoords[i]), angle);//rotate point
-            xCoords[i] = -fUnits(use.x + xPos);//convert to canvas coordinates & store in arrays
-            yCoords[i] = fUnits(use.y + yPos);
-        }
-        //
-        return new double[][]{xCoords, yCoords};
+    public void drawRobot(TelemetryPacket packet, double xPos, double yPos, double angle){
+        rotRect(packet, xPos, yPos, ROBOT_WIDTH, ROBOT_LENGTH, angle, "red");
+        rotRect(packet, xPos + (Math.sin(Math.toRadians(angle)) * ((ROBOT_LENGTH / 2) - 1)), yPos + (Math.cos(Math.toRadians(angle)) * ((ROBOT_LENGTH / 2) - 1)), ROBOT_WIDTH, 2, angle, "blue");
     }
     //
     public void rotRect(TelemetryPacket packet, double xPos, double yPos, double width, double length, double angle, String color){
@@ -2022,13 +2316,13 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public double getMidRotDist(double width, double length, double angle){
-        return pythagorus(width / 2, length / 2) * Math.sin(angle + inverseTrigGyro(width, length, pythagorus(width, length)));
+        return pythagorus(width / 2, length / 2) * Math.sin(Math.toRadians(angle + inverseTrigGyro(width, length, pythagorus(width, length))));
     }
     //
     public double[] wallTouchCorrect(double xPos, double yPos, double angle){
         //
-        double g1 = getMidRotDist(ROBOT_WIDTH, ROBOT_LENGTH, angle);//calculate both distances to the midpoint of a rotated rectangle
-        double g2 = getMidRotDist(ROBOT_WIDTH, ROBOT_LENGTH, -angle);//the longer distance will be longer in all directions
+        double g1 = Math.abs(getMidRotDist(ROBOT_WIDTH, ROBOT_LENGTH, angle));//calculate both distances to the midpoint of a rotated rectangle
+        double g2 = Math.abs(getMidRotDist(ROBOT_WIDTH, ROBOT_LENGTH, -angle));//the longer distance will be longer in all directions
         //
         double g3;
         if(g1 > g2){//find the longer distance to the midpoint
@@ -2039,8 +2333,8 @@ public abstract class jeremy extends LinearOpMode {
         //
         if(xPos + g3 > FIELD_DIM_REAL / 2){//check positive x breach
             xPos = FIELD_DIM_REAL / 2 - g3;
-        }else if (xPos - g3 < FIELD_DIM_REAL / -2){//check negative x breach
-            xPos = FIELD_DIM_REAL / -2 + g3;
+        }else if (xPos - g3 < FIELD_DIM_REAL / -6){//check negative x breach
+            xPos = FIELD_DIM_REAL / -6 + g3;
         }
         if(yPos + g3 > FIELD_DIM_REAL / 2){//check positive y breach
             yPos = FIELD_DIM_REAL / 2 - g3;
@@ -2048,5 +2342,23 @@ public abstract class jeremy extends LinearOpMode {
             yPos = FIELD_DIM_REAL / -2 + g3;
         }
         return new double[]{xPos, yPos};
+    }
+    //
+    public void checkLineCross(double xPos, double yPos){
+        //
+        //rotatePoint()
+        //
+    }
+    //
+    public void newHopeProto(FtcDashboard dashboard, TelemetryPacket packet){
+        //
+        turnToAngleError(0, .1, 3);
+        //
+        odoYToPosition(dashboard, packet, 2.5, .2);
+        //
+        odoXToPosition(dashboard, packet, 26.5, .2);
+        //
+        turnToAngleError(0, .1, 10);
+        //
     }
 }
