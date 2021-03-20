@@ -1540,7 +1540,7 @@ public abstract class jeremy extends LinearOpMode {
             telemetry.update();
         }
         still();
-        //
+        //turns need to be fixed so they don't go the wrong way
         turnToAngleError(5.5,.1,4);//first turn (right)
         feed.setPosition(FEEDPUSH);
         sleep(1000);
