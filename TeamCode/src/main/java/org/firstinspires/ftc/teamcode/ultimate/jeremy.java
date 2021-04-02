@@ -115,6 +115,8 @@ public abstract class jeremy extends LinearOpMode {
     //
     Double conversion = cpi * bias;
     //
+    static final Double launchConv = 1069.364;
+    //
     Double turnSpeed = 15.0;//degrees second at full power
     //
     //<editor-fold desc="Var for Extr Functions">
@@ -184,11 +186,14 @@ public abstract class jeremy extends LinearOpMode {
     //
     //</editor-fold>
     //
+    final static Double propConst = 0.000002;//0.000005
+    final static Double dampConst = 0.0001;//0.005
+    double lastError = 0.0;
+    //
     Boolean opModeStarted;
     //
     //<editor-fold desc="Init Functions">
     public void Init(){
-        //
         controlHub = hardwareMap.get(ExpansionHubEx.class, "Control Hub");
         expansionHub = hardwareMap.get(ExpansionHubEx.class, "Expansion Hub 1");
         controlHub.setLedColor(255,0,0);
@@ -206,24 +211,34 @@ public abstract class jeremy extends LinearOpMode {
         initGyro();
         initOpen();
         //
-        if(expansionHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.5) {
+        if(controlHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.7) {
             controlHub.setLedColor(0, 255, 0);
             expansionHub.setLedColor(0, 255, 0);
             //
             telemetry.addData("Initialization", "complete");
-            telemetry.update();
-        }else{
+        }else if(controlHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.5){
             controlHub.setLedColor(255, 196, 0);
             expansionHub.setLedColor(255, 196, 0);
-            //
+            //168, 28, 255
             telemetry.addData("Initialization", "complete");
             telemetry.addData("WARNING", "Battery power low");
-            telemetry.update();
+        }else{
+            controlHub.setLedColor(168, 28, 255);
+            expansionHub.setLedColor(168, 28, 255);
+            //
+            telemetry.addData("Initialization", "complete");
+            telemetry.addData("WARNING", "Battery power very low");
         }
+        telemetry.update();
         //
     }
     //
     public void InitNoOpen(){
+        controlHub = hardwareMap.get(ExpansionHubEx.class, "Control Hub");
+        expansionHub = hardwareMap.get(ExpansionHubEx.class, "Expansion Hub 1");
+        controlHub.setLedColor(255,0,0);
+        expansionHub.setLedColor(255,0,0);
+        //
         chassisHardware();
         motorHardware();
         sensorHardware();
@@ -235,20 +250,25 @@ public abstract class jeremy extends LinearOpMode {
         //
         initGyro();
         //
-        if(expansionHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.5) {
+        if(controlHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.7) {
             controlHub.setLedColor(0, 255, 0);
             expansionHub.setLedColor(0, 255, 0);
             //
             telemetry.addData("Initialization", "complete");
-            telemetry.update();
-        }else{
+        }else if(controlHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.5){
             controlHub.setLedColor(255, 196, 0);
             expansionHub.setLedColor(255, 196, 0);
-            //
+            //168, 28, 255
             telemetry.addData("Initialization", "complete");
             telemetry.addData("WARNING", "Battery power low");
-            telemetry.update();
+        }else{
+            controlHub.setLedColor(168, 28, 255);
+            expansionHub.setLedColor(168, 28, 255);
+            //
+            telemetry.addData("Initialization", "complete");
+            telemetry.addData("WARNING", "Battery power very low");
         }
+        telemetry.update();
     }
     //
     public void YodaInit(){
@@ -296,7 +316,7 @@ public abstract class jeremy extends LinearOpMode {
         motorConfigurationType.setAchieveableMaxRPMFraction(1.0);
         launcher.setMotorType(motorConfigurationType);
         //
-        launcher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+        launcher.setMode(DcMotor.RunMode.RUN_USING_ENCODER);//run with encoder
     }
     //
     public void sensorHardware(){
@@ -1258,11 +1278,11 @@ public abstract class jeremy extends LinearOpMode {
         if (right){
             turnWithEncoder(speed);
             //
-            while (!(getAngle() > angle)){}
+            while (!(getAngle() > angle) && opModeIsActive()){}
         }else {
             turnWithEncoder(-speed);
             //
-            while (!(getAngle() < angle)){}
+            while (!(getAngle() < angle) && opModeIsActive()){}
         }
         still();
         //
@@ -1488,7 +1508,6 @@ public abstract class jeremy extends LinearOpMode {
     }
     //
     public void powerFromWall(double speed){
-        //
         frontLeft.setPower(-speed);
         backLeft.setPower(-speed);
         frontRight.setPower(-speed);
@@ -1503,6 +1522,9 @@ public abstract class jeremy extends LinearOpMode {
             return;
         }
         //
+        moveToPosition(-3, .3);
+        motorsWithEncoders();
+        //
         int lastX = xEnc.getCurrentPosition();//set odo values
         int lastYLeft = yEncLeft.getCurrentPosition();
         int curX = lastX;
@@ -1514,9 +1536,6 @@ public abstract class jeremy extends LinearOpMode {
         //
         xPos = 0.0;//set coordinates to (0,0)
         yPos = 0.0;
-        //
-        moveToPosition(-3, .3);
-        motorsWithEncoders();
         //
         frontLeft.setPower(speed);
         backLeft.setPower(-speed);
@@ -1541,22 +1560,27 @@ public abstract class jeremy extends LinearOpMode {
         }
         still();
         //turns need to be fixed so they don't go the wrong way
-        turnToAngleError(5.5,.1,4);//first turn (right)
+        turnPast(-6, .1, false);
+        sleep(500);
+        //turnToAngleError(5.5,.1,4);//first turn (right)
+        turnPast(1.5, .1,true);
         feed.setPosition(FEEDPUSH);
         sleep(1000);
-        launcher.setPower(.805);
+        launcher.setPower(.8);
         //
         feed.setPosition(FEEDPULL);
         //
-        turnToAngleError(-1, .1,2);//second turn (middle)
-        sleep(500);
+        //turnToAngleError(-1, .1,2);//second turn (middle)
+        turnPast(0, .1, false);
+        sleep(1000);
         feed.setPosition(FEEDPUSH);
         sleep(1000);
         launcher.setPower(.81);
         //
         feed.setPosition(FEEDPULL);
         //
-        turnToAngleError(-6,.1,2);//last turn (left)
+        //turnToAngleError(-6,.1,2);//last turn (left)
+        turnPast(-6, .1, false);
         sleep(500);
         feed.setPosition(FEEDPUSH);
         sleep(1000);
@@ -2237,8 +2261,21 @@ public abstract class jeremy extends LinearOpMode {
         angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
         origin = -angles.firstAngle;
     }
+    //
+    public double calcPower(double rpm, double rpmGoal){
+        double curPower = launcher.getPower();
+        double curError = rpmGoal - rpm;
+        //
+        double output = curPower + (propConst * curError);
+        if(Math.abs(curError) > 300){
+            output += dampConst * (curError - lastError);
+        }
+        double lastError = curError;
+        return output;
+    }
     //</editor-fold>
     //
+    //<editor-fold desc="Odometry">
     public int[] updateOdo(FtcDashboard dashboard, TelemetryPacket packet, int curX, int curYLeft){
         //
         int lastX = curX;
@@ -2361,4 +2398,5 @@ public abstract class jeremy extends LinearOpMode {
         turnToAngleError(0, .1, 10);
         //
     }
+    //</editor-fold>
 }

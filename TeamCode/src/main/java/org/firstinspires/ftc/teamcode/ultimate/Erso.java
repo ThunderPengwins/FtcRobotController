@@ -3,8 +3,13 @@ package org.firstinspires.ftc.teamcode.ultimate;
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
+import com.qualcomm.robotcore.hardware.DcMotor;
+
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 
 import static java.lang.Math.abs;
+import static java.lang.Math.addExact;
 
 @TeleOp(name = "Erso", group = "test")
 public class Erso extends jeremy{
@@ -25,9 +30,22 @@ public class Erso extends jeremy{
     float leftTrigger;
     float rightTrigger;
     //
+    double rpm = 0;
+    int lastEnc = 0;
+    Long lastTime =  System.currentTimeMillis();
+    Long deltaTime = 0L;
+    //
     public void runOpMode(){
         //
+        ArrayList<Double> rpmSamples = new ArrayList<>();
+        for(int i = 0; i < 6; i++){
+            rpmSamples.add(0.0);
+        }
+        //
         InitNoOpen();
+        //
+        launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+        lastEnc = launcher.getCurrentPosition();
         //
         FtcDashboard dashboard = FtcDashboard.getInstance();
         TelemetryPacket packet = new TelemetryPacket();
@@ -57,6 +75,9 @@ public class Erso extends jeremy{
         boolean sleeping = false;
         double moveSpeed = 0.3;
         Long startTime = System.currentTimeMillis();
+        double rpmGoal = 2700;//2400 for power shots
+        boolean runLauncher = false;
+        double rollingAvg = 0;
         //
         packet.put("Initialization", "complete");
         dashboard.sendTelemetryPacket(packet);
@@ -102,7 +123,7 @@ public class Erso extends jeremy{
                     //
                     runFeed(bButton);
                     //
-                    runLauncherIncr(dUp,dDown,leftBumper,rightBumper);
+                    //runLauncherIncr(dUp,dDown,leftBumper,rightBumper);
                     //
                     packet = new TelemetryPacket();
                     //
@@ -111,14 +132,42 @@ public class Erso extends jeremy{
                             .fillRect(fUnits(FIELD_DIM_DIG / -2),fUnits(FIELD_DIM_DIG / 6),fUnits(FIELD_DIM_DIG),2);
                     drawRobot(packet, xPos, yPos, gcAngle);
                     //
+                    deltaTime = System.currentTimeMillis() - lastTime;
+                    rpm = launchConv * (launcher.getCurrentPosition() - lastEnc) / deltaTime;
+                    lastTime = System.currentTimeMillis();
+                    lastEnc = launcher.getCurrentPosition();
+                    //
+                    rollingAvg += rpm / 6;
+                    rollingAvg -= rpmSamples.get(0) / 6;
+                    rpmSamples.remove(0);
+                    rpmSamples.add(rpm);
+                    //
+                    if(dUp) {
+                        runLauncher = true;
+                    }else if(dDown){
+                        runLauncher = false;
+                    }
+                    if(runLauncher){
+                        launcher.setPower(calcPower(rollingAvg, rpmGoal));
+                    }else{
+                        launcher.setPower(0);
+                    }
+                    //
                     packet.put("autoMode", autoMode);
-                    packet.put("Time", System.currentTimeMillis());
-                    packet.put("Start time", startTime);
-                    packet.put("angle", gcAngle);
-                    packet.put("xPos", xPos);
-                    packet.put("yPos", yPos);
-                    packet.put("curX", curX);
-                    packet.put("curYLeft", curYLeft);
+                    //packet.put("Time", System.currentTimeMillis());
+                    //packet.put("Start time", startTime);
+                    //packet.put("angle", gcAngle);
+                    //packet.put("xPos", xPos);
+                    //packet.put("yPos", yPos);
+                    //packet.put("curX", curX);
+                    //packet.put("curYLeft", curYLeft);
+                    packet.put("rpm", rpm);
+                    packet.put("rpm average", rollingAvg);
+                    packet.put("rpm error", rpmGoal - rpm);
+                    packet.put("power", launcher.getPower());
+                    packet.put("calcPower", calcPower(rollingAvg, rpmGoal));
+                    packet.put("deltaTime", deltaTime);
+                    packet.put("lastEnc", lastEnc);
                     //packet.put("curYRight", curYRight);
                     dashboard.sendTelemetryPacket(packet);
                     //

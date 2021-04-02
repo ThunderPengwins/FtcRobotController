@@ -7,6 +7,8 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
+import java.util.ArrayList;
+
 @TeleOp(name = "Luke", group = "working")
 public class Luke extends jeremy {
     //
@@ -34,6 +36,19 @@ public class Luke extends jeremy {
     double ayaw = 0;
     boolean moveTurning = false;
     //
+    int autoMode = 0;
+    boolean sleeping = false;
+    double moveSpeed = 0.3;
+    Long startTime = System.currentTimeMillis();
+    double rpmGoal = 2700;//2400 for power shots
+    boolean runLauncher = false;
+    double rollingAvg = 0;
+    //
+    double rpm = 0;
+    int lastEnc = 0;
+    Long lastTime =  System.currentTimeMillis();
+    Long deltaTime = 0L;
+    //
     //Long time = System.currentTimeMillis();
     //
     public void runOpMode() {
@@ -41,6 +56,11 @@ public class Luke extends jeremy {
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         //
         InitNoOpen();
+        //
+        ArrayList<Double> rpmSamples = new ArrayList<>();
+        for(int i = 0; i < 6; i++){
+            rpmSamples.add(0.0);
+        }
         //
         //backRight.setDirection(DcMotorSimple.Direction.FORWARD);
         //
@@ -83,7 +103,7 @@ public class Luke extends jeremy {
             }
             //
             if(oxButton){
-                powerFromWall(0.3);
+                powerFromWall(0.3);//add rpm control here
             }
             //
             if(gamepad1.right_stick_button && !fdrightpressed){
@@ -104,6 +124,27 @@ public class Luke extends jeremy {
             runFeed(bButton);
             //
             runLauncherIncr(dUp,dDown,leftBumper, rightBumper);//run launcher with arrows to increment by 5%
+            //
+            /*deltaTime = System.currentTimeMillis() - lastTime;
+            rpm = launchConv * (launcher.getCurrentPosition() - lastEnc) / deltaTime;
+            lastTime = System.currentTimeMillis();
+            lastEnc = launcher.getCurrentPosition();
+            //
+            rollingAvg += rpm / 6;
+            rollingAvg -= rpmSamples.get(0) / 6;
+            rpmSamples.remove(0);
+            rpmSamples.add(rpm);
+            //
+            if(dUp) {
+                runLauncher = true;
+            }else if(dDown){
+                runLauncher = false;
+            }
+            if(runLauncher){
+                launcher.setPower(calcPower(rollingAvg, rpmGoal));
+            }else{
+                launcher.setPower(0);
+            }*/
             //
             runWobble(-leftTrigger, -rightTrigger);
             //
@@ -133,7 +174,8 @@ public class Luke extends jeremy {
             telemetry.addData("Intakefeed power", intakeFeederPower);
             telemetry.addData("Wobble up", wobbleUp.getState());
             telemetry.addData("Keeper position", keeper.getPosition());*/
-            telemetry.addData("Launcher power", Math.round(1000 * launcherPower) / 10 + "%");
+            //telemetry.addData("Launcher power", Math.round(1000 * launcherPower) / 10 + "%");
+            telemetry.addData("rpm", rollingAvg);
             telemetry.addData("angle", getAngle());
             telemetry.update();
             //time = System.currentTimeMillis();
