@@ -114,7 +114,7 @@ public class Lukewarm extends jeremy {
             //
             keepEmDead(xButton);//run wobble servo
             //
-            runTaper(firstdDown);
+            runTaper(.3);
             //
             telemetry.addData("loop speed", System.currentTimeMillis() - time);
             telemetry.addData("tape mode", tapeMode);

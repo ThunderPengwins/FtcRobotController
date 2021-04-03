@@ -149,6 +149,9 @@ public abstract class jeremy extends LinearOpMode {
     Boolean togglePressed = false;
     Boolean psTogglePressed = false;
     //
+    Double launcherRPM = 2600.0;
+    Double psLauncherRPM = 2400.0;
+    //
     Long feedStartTime = 0L;
     Long timeDif = 0L;
     //
@@ -186,8 +189,8 @@ public abstract class jeremy extends LinearOpMode {
     //
     //</editor-fold>
     //
-    final static Double propConst = 0.000002;//0.000005
-    final static Double dampConst = 0.0001;//0.005
+    final static Double propConst = 0.000002;//0.000002
+    final static Double dampConst = 0.0002;//0.0001
     double lastError = 0.0;
     //
     Boolean opModeStarted;
@@ -266,7 +269,7 @@ public abstract class jeremy extends LinearOpMode {
             expansionHub.setLedColor(168, 28, 255);
             //
             telemetry.addData("Initialization", "complete");
-            telemetry.addData("WARNING", "Battery power very low");
+            telemetry.addData("WARNING", "Battery power extremely low");
         }
         telemetry.update();
     }
@@ -790,6 +793,44 @@ public abstract class jeremy extends LinearOpMode {
         //
     }
     //
+    public void runLauncherSmart(boolean dUp, boolean dDown, boolean leftBumper, boolean rightBumper, double rpm){
+        if((dUp || dDown) && !arrowPressed){//arrow pressed
+            arrowPressed = true;
+            if(dUp && launcherRPM < 3000){//incr rpm by 50
+                launcherRPM += 50;
+            }else if(launcherRPM > 0){//decr rpm by 50
+                launcherRPM -= 50;
+            }
+        }else if(!dUp && !dDown && arrowPressed){//arrow released
+            arrowPressed = false;
+        }
+        //
+        if(leftBumper && !togglePressed){//toggle pressed
+            launcherToggle = !launcherToggle;//invert state
+            togglePressed = true;
+            if(!launcherToggle){//turn off if off
+                launcher.setPower(0);
+            }else{
+                intake.setPower(0);
+                intakeRunning = false;
+                intakefeed.setPower(0);
+            }
+        }else if(!leftBumper && togglePressed){//toggle released
+            togglePressed = false;
+        }
+        //
+        if(rightBumper && !psTogglePressed){//ps toggle pressed
+            launcherRPM = psLauncherRPM;
+            psTogglePressed = true;
+        }else if(!rightBumper && psTogglePressed){//ps toggle released
+            psTogglePressed = false;
+        }
+        //
+        if(launcherToggle) {
+            launcher.setPower(calcPower(rpm,launcherRPM));
+        }
+    }
+    //
     public void runFeed(boolean bButton){
         if(bButton && !bPressed && !feedRunning){
             feedStartTime = System.currentTimeMillis();
@@ -833,44 +874,26 @@ public abstract class jeremy extends LinearOpMode {
         }
     }
     //
-    public void runTaper(boolean dDown){
-        if(tapeMode == 0 && dDown && !dDownPressed){
-            tapeMode = 1;
-            dDownPressed = true;
-            if(getAngle() > 10){
-                /*if(getAngle() < 20){
-                    babyTurn(-.1, 1);
-                    tapeSlowTurn = true;
-                }else{*/
-                    babyTurn(-.2, 1);
-                    //tapeSlowTurn = false;
-                //}
-            }else{
-                /*if(getAngle() > 0){
-                    babyTurn(.1, 1);
-                    tapeSlowTurn = true;
-                }else{*/
-                    babyTurn(.2, 1);
-                    //tapeSlowTurn = false;
-                //}
-            }
-            //babyTurn(-.2, 1);
-        }else if((/*(tapeSlowTurn &&*/ angleInBounds(10, 5)/*) || (!tapeSlowTurn && inBounds(10, 10))*/) && tapeMode == 1){
-            tapeMode = 2;
-            move(0, -1, .4);
-            tapeStart = frontLeft.getCurrentPosition();
-        }else if(tape.red() > 80 && tapeMode == 2){
-            tapeMode = 0;
-            still();
+    public void runTaper(double speed){
+        if(angleInBounds(0, 5)){
+            turnToAngleError(0, .05, 2);
+        }else {
+            turnToAngleError(0, .2, 7);//you can use tapemode
         }
-        if(dDownPressed && !dDown){
-            dDownPressed = false;
-        }
-        if((frontLeft.getCurrentPosition() < tapeStart - (conversion * 60) && tapeMode == 2) || (dDown && tapeMode != 0 && !dDownPressed)){
-            tapeMode = 0;
-            dDownPressed = true;
-            still();
-        }
+        //
+        frontLeft.setPower(-speed);
+        backLeft.setPower(-speed);
+        frontRight.setPower(-speed);
+        backRight.setPower(-speed);
+        //
+        double startPos = frontLeft.getCurrentPosition();
+        //
+        while (tape.red() < 80 && opModeIsActive() && ((startPos - frontLeft.getCurrentPosition()) / conversion < 30)){}
+        still();
+        //
+        moveToPosition(-5, speed);
+        //
+        motorsWithEncoders();
     }
     //
     public void autoPower(){
@@ -1229,8 +1252,7 @@ public abstract class jeremy extends LinearOpMode {
     //
     public void turnToAngleError(double angle, double speed, double error){
         //
-        angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
-        double current = -angles.firstAngle;
+        double current = getAngle();
         //
         if (current > angle){
             turnWithEncoder(-speed);
@@ -2265,12 +2287,13 @@ public abstract class jeremy extends LinearOpMode {
     public double calcPower(double rpm, double rpmGoal){
         double curPower = launcher.getPower();
         double curError = rpmGoal - rpm;
+        double deltaError = curError - lastError;
         //
         double output = curPower + (propConst * curError);
-        if(Math.abs(curError) > 300){
-            output += dampConst * (curError - lastError);
+        if(Math.abs(deltaError) > 300){
+            output += dampConst * (deltaError);
         }
-        double lastError = curError;
+        lastError = curError;
         return output;
     }
     //</editor-fold>

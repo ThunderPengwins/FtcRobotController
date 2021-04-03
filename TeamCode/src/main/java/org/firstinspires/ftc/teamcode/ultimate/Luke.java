@@ -33,23 +33,12 @@ public class Luke extends jeremy {
     //
     boolean fdrightpressed;
     //
-    double ayaw = 0;
-    boolean moveTurning = false;
-    //
-    int autoMode = 0;
-    boolean sleeping = false;
-    double moveSpeed = 0.3;
-    Long startTime = System.currentTimeMillis();
-    double rpmGoal = 2700;//2400 for power shots
-    boolean runLauncher = false;
     double rollingAvg = 0;
     //
     double rpm = 0;
     int lastEnc = 0;
     Long lastTime =  System.currentTimeMillis();
     Long deltaTime = 0L;
-    //
-    //Long time = System.currentTimeMillis();
     //
     public void runOpMode() {
         //
@@ -119,13 +108,11 @@ public class Luke extends jeremy {
             //
             runIntake(aButton,yButton,oyButton);
             //
-            runIntakeFeeder(firstdLeft, firstdUp);
+            //runIntakeFeeder(firstdLeft, firstdUp);
             //
             runFeed(bButton);
             //
-            runLauncherIncr(dUp,dDown,leftBumper, rightBumper);//run launcher with arrows to increment by 5%
-            //
-            /*deltaTime = System.currentTimeMillis() - lastTime;
+            deltaTime = System.currentTimeMillis() - lastTime;
             rpm = launchConv * (launcher.getCurrentPosition() - lastEnc) / deltaTime;
             lastTime = System.currentTimeMillis();
             lastEnc = launcher.getCurrentPosition();
@@ -135,22 +122,15 @@ public class Luke extends jeremy {
             rpmSamples.remove(0);
             rpmSamples.add(rpm);
             //
-            if(dUp) {
-                runLauncher = true;
-            }else if(dDown){
-                runLauncher = false;
-            }
-            if(runLauncher){
-                launcher.setPower(calcPower(rollingAvg, rpmGoal));
-            }else{
-                launcher.setPower(0);
-            }*/
+            runLauncherSmart(dUp, dDown, leftBumper, rightBumper, rollingAvg);
             //
             runWobble(-leftTrigger, -rightTrigger);
             //
             keepEmDead(xButton);//run wobble servo
             //
-            runTaper(firstdDown);
+            if(firstdDown) {
+                runTaper(.3);
+            }
             //
             /*if(gamepad1.x){
                 autoPower();
@@ -175,8 +155,11 @@ public class Luke extends jeremy {
             telemetry.addData("Wobble up", wobbleUp.getState());
             telemetry.addData("Keeper position", keeper.getPosition());*/
             //telemetry.addData("Launcher power", Math.round(1000 * launcherPower) / 10 + "%");
-            telemetry.addData("rpm", rollingAvg);
-            telemetry.addData("angle", getAngle());
+            telemetry.addData("rpm Goal", launcherRPM);
+            telemetry.addData("rpm toggle", launcherToggle);
+            telemetry.addData("rpm avg", rollingAvg);
+            telemetry.addData("rpm", rpm);
+            //telemetry.addData("angle", getAngle());
             telemetry.update();
             //time = System.currentTimeMillis();
         }
