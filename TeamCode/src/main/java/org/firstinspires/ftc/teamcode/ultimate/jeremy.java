@@ -195,6 +195,14 @@ public abstract class jeremy extends LinearOpMode {
     //
     Boolean opModeStarted;
     //
+    double rollingAvg = 0;
+    //
+    double rpm = 0;
+    int lastEnc = 0;
+    Long lastTime =  System.currentTimeMillis();
+    Long deltaTime = 0L;
+    ArrayList<Double> rpmSamples = new ArrayList<>();
+    //
     //<editor-fold desc="Init Functions">
     public void Init(){
         controlHub = hardwareMap.get(ExpansionHubEx.class, "Control Hub");
@@ -213,6 +221,10 @@ public abstract class jeremy extends LinearOpMode {
         //
         initGyro();
         initOpen();
+        //
+        for(int i = 0; i < 6; i++){
+            rpmSamples.add(0.0);
+        }
         //
         if(controlHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.7) {
             controlHub.setLedColor(0, 255, 0);
@@ -252,6 +264,10 @@ public abstract class jeremy extends LinearOpMode {
         setMotorReversals();
         //
         initGyro();
+        //
+        for(int i = 0; i < 6; i++){
+            rpmSamples.add(0.0);
+        }
         //
         if(controlHub.read12vMonitor(ExpansionHubEx.VoltageUnits.VOLTS) > 12.7) {
             controlHub.setLedColor(0, 255, 0);
@@ -969,6 +985,30 @@ public abstract class jeremy extends LinearOpMode {
         return;
     }
     //
+    public void moveToPositionLauncher(double inches, double speed, double rpmGoal){
+        //
+        int move = (int)(Math.round(inches*conversion));
+        //
+        backLeft.setTargetPosition(backLeft.getCurrentPosition() + move);
+        frontLeft.setTargetPosition(frontLeft.getCurrentPosition() + move);
+        backRight.setTargetPosition(backRight.getCurrentPosition() + move);
+        frontRight.setTargetPosition(frontRight.getCurrentPosition() + move);
+        //
+        motorsToPosition();
+        //
+        frontLeft.setPower(speed);
+        backLeft.setPower(speed);
+        frontRight.setPower(speed);
+        backRight.setPower(speed);
+        //
+        while (frontLeft.isBusy() && frontRight.isBusy() && backLeft.isBusy() && backRight.isBusy() && opModeIsActive()){
+            calcRPM();
+            launcher.setPower(calcPower(rollingAvg, rpmGoal));
+        }
+        still();
+        return;
+    }
+    //
     public void wiggleToPosition(boolean left, double inches, double speed){
         //
         int move = (int)(Math.round(inches*conversion));
@@ -1261,6 +1301,8 @@ public abstract class jeremy extends LinearOpMode {
         }
         //
         while (!(angleInBounds(angle, error)) && opModeIsActive()){
+            calcRPM();
+            launcher.setPower(calcPower(rollingAvg, rollingAvg));
             //angles = imu.getAngularOrientation(AxesReference.INTRINSIC, AxesOrder.ZYX, AngleUnit.DEGREES);
             //current = -angles.firstAngle;
             /*telemetry.addData("Target",angle);
@@ -1269,6 +1311,36 @@ public abstract class jeremy extends LinearOpMode {
         }
         still();
         //
+    }
+    //
+    public void turnToAngleErrorLauncher(double angle, double speed, double error, double rpmGoal, TelemetryPacket packet, FtcDashboard dashboard){
+        //
+        double current = getAngle();
+        //
+        if (current > angle){
+            turnWithEncoder(-speed);
+        }else{
+            turnWithEncoder(speed);
+        }
+        //
+        while (!(angleInBounds(angle, error)) && opModeIsActive()){
+            calcRPM();
+            launcher.setPower(calcPower(rollingAvg, rpmGoal));
+            packet.put("rpm", rollingAvg);
+            packet.put("rpm goal", rpmGoal);
+            dashboard.sendTelemetryPacket(packet);
+        }
+        still();
+        //
+    }
+    //
+    public void sleepLauncher(long milliseconds, double rpmGoal){
+        Long startTime = System.currentTimeMillis();
+        while(System.currentTimeMillis() < startTime + milliseconds){
+            calcRPM();
+            launcher.setPower(calcPower(rollingAvg, rpmGoal));
+        }
+        still();
     }
     //
     /*public void turnToAngleOdo(double angle, double speed, double error){
@@ -2295,6 +2367,18 @@ public abstract class jeremy extends LinearOpMode {
         }
         lastError = curError;
         return output;
+    }
+    //
+    public void calcRPM(){
+        deltaTime = System.currentTimeMillis() - lastTime;
+        rpm = launchConv * (launcher.getCurrentPosition() - lastEnc) / deltaTime;
+        lastTime = System.currentTimeMillis();
+        lastEnc = launcher.getCurrentPosition();
+        //
+        rollingAvg += rpm / 6;
+        rollingAvg -= rpmSamples.get(0) / 6;
+        rpmSamples.remove(0);
+        rpmSamples.add(rpm);
     }
     //</editor-fold>
     //

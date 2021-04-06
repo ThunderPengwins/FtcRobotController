@@ -33,23 +33,11 @@ public class Luke extends jeremy {
     //
     boolean fdrightpressed;
     //
-    double rollingAvg = 0;
-    //
-    double rpm = 0;
-    int lastEnc = 0;
-    Long lastTime =  System.currentTimeMillis();
-    Long deltaTime = 0L;
-    //
     public void runOpMode() {
         //
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
         //
         InitNoOpen();
-        //
-        ArrayList<Double> rpmSamples = new ArrayList<>();
-        for(int i = 0; i < 6; i++){
-            rpmSamples.add(0.0);
-        }
         //
         //backRight.setDirection(DcMotorSimple.Direction.FORWARD);
         //
@@ -112,15 +100,7 @@ public class Luke extends jeremy {
             //
             runFeed(bButton);
             //
-            deltaTime = System.currentTimeMillis() - lastTime;
-            rpm = launchConv * (launcher.getCurrentPosition() - lastEnc) / deltaTime;
-            lastTime = System.currentTimeMillis();
-            lastEnc = launcher.getCurrentPosition();
-            //
-            rollingAvg += rpm / 6;
-            rollingAvg -= rpmSamples.get(0) / 6;
-            rpmSamples.remove(0);
-            rpmSamples.add(rpm);
+            calcRPM();
             //
             runLauncherSmart(dUp, dDown, leftBumper, rightBumper, rollingAvg);
             //

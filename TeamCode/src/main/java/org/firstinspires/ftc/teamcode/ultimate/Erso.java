@@ -30,11 +30,6 @@ public class Erso extends jeremy{
     float leftTrigger;
     float rightTrigger;
     //
-    double rpm = 0;
-    int lastEnc = 0;
-    Long lastTime =  System.currentTimeMillis();
-    Long deltaTime = 0L;
-    //
     public void runOpMode(){
         //
         ArrayList<Double> rpmSamples = new ArrayList<>();
@@ -77,7 +72,6 @@ public class Erso extends jeremy{
         Long startTime = System.currentTimeMillis();
         double rpmGoal = 2700;//2400 for power shots
         boolean runLauncher = false;
-        double rollingAvg = 0;
         //
         packet.put("Initialization", "complete");
         dashboard.sendTelemetryPacket(packet);
@@ -132,15 +126,7 @@ public class Erso extends jeremy{
                             .fillRect(fUnits(FIELD_DIM_DIG / -2),fUnits(FIELD_DIM_DIG / 6),fUnits(FIELD_DIM_DIG),2);
                     drawRobot(packet, xPos, yPos, gcAngle);
                     //
-                    deltaTime = System.currentTimeMillis() - lastTime;
-                    rpm = launchConv * (launcher.getCurrentPosition() - lastEnc) / deltaTime;
-                    lastTime = System.currentTimeMillis();
-                    lastEnc = launcher.getCurrentPosition();
-                    //
-                    rollingAvg += rpm / 6;
-                    rollingAvg -= rpmSamples.get(0) / 6;
-                    rpmSamples.remove(0);
-                    rpmSamples.add(rpm);
+                    calcRPM();
                     //
                     if(dUp) {
                         runLauncher = true;
