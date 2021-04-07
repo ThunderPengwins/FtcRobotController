@@ -40,7 +40,7 @@ public class Rook extends jeremy{
         //
         waitForStartify();
         //
-        moveToPosition(55,.3);
+        moveToPositionLauncher(55,.3, 2475);
         //
         //<editor-fold desc="strafe with odometry">
         motorsWithEncoders();
@@ -49,7 +49,6 @@ public class Rook extends jeremy{
         int lastYLeft = yEncLeft.getCurrentPosition();
         int curX = lastX;
         int curYLeft = lastYLeft;
-        origin = getRawGyro();
         gcAngle = getAngle();
         double lastAngle;
         //
@@ -58,9 +57,9 @@ public class Rook extends jeremy{
         frontRight.setPower(.3);
         backRight.setPower(-.3);
         //
-        while (!inBounds(xPos, -20, 3) && opModeIsActive()){
+        while (!inBounds(xPos, -21, 3) && opModeIsActive()){
             calcRPM();
-            launcher.setPower(calcPower(rollingAvg, psLauncherRPM));
+            launcher.setPower(calcPower(rollingAvg, 2475));
             //
             lastX = curX;
             lastYLeft = curYLeft;
@@ -72,9 +71,6 @@ public class Rook extends jeremy{
             //
             xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
             yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
-            packet.put("rpm", rollingAvg);
-            packet.put("rpm goal", psLauncherRPM);
-            dashboard.sendTelemetryPacket(packet);
         }
         still();
         //</editor-fold>
@@ -82,8 +78,8 @@ public class Rook extends jeremy{
         packet.put("ring","1");
         dashboard.sendTelemetryPacket(packet);
         //
-        double rpm1 = 2475;
-        turnToAngleErrorLauncher(5.5,.1,2, rpm1, packet, dashboard);//first turn (right)
+        double rpm1 = 2500;
+        turnToAngleErrorLauncher(5.5,.1,2, rpm1);//first turn (right)
         feed.setPosition(FEEDPUSH);
         sleepLauncher(1000, rpm1);
         //
@@ -91,8 +87,8 @@ public class Rook extends jeremy{
         packet.put("ring","2");
         dashboard.sendTelemetryPacket(packet);
         //
-        double rpm2 = 2400;
-        turnToAngleErrorLauncher(0, .1,2, rpm2, packet, dashboard);//second turn (middle)
+        double rpm2 = 2425;
+        turnToAngleErrorLauncher(0, .1,2, rpm2);//second turn (middle)
         sleepLauncher(500, rpm2);
         feed.setPosition(FEEDPUSH);
         sleepLauncher(1000, rpm2);
@@ -101,7 +97,7 @@ public class Rook extends jeremy{
         packet.put("ring","3");
         dashboard.sendTelemetryPacket(packet);
         //
-        turnToAngleErrorLauncher(-6,.1,2, 2475, packet, dashboard);//last turn (left)
+        turnToAngleErrorLauncher(-6,.1,2, 2475);//last turn (left)
         sleepLauncher(500, 2475);
         feed.setPosition(FEEDPUSH);
         sleepLauncher(1000, 2475);
@@ -126,7 +122,7 @@ public class Rook extends jeremy{
             //
             turnToAngleError(-15, .4, 5);
             //
-            moveToPosition(-30, .6);
+            moveToPosition(-34, .6);
             sleep(500);
             //
             keeper.setPosition(1);//set closed
@@ -199,48 +195,78 @@ public class Rook extends jeremy{
             sleep(500);
         }else{
             //
-            turnToAngleError(-125, .3, 5);
+            turnPast(-8, .2, false);
             //
-            moveToPosition(-60, .7);
+            turnToAngleError(0, .07, 4);
             //
-            wobble.setPower(-0.4);
+            motorsWithEncoders();
+            //
+            lastX = xEnc.getCurrentPosition();//update odo values
+            lastYLeft = yEncLeft.getCurrentPosition();
+            curX = lastX;
+            curYLeft = lastYLeft;
+            gcAngle = getAngle();
+            //
+            frontLeft.setPower(.3);//strafe right
+            backLeft.setPower(-.3);
+            frontRight.setPower(-.3);
+            backRight.setPower(.3);
+            intake.setPower(1);//run intake
+            //
+            xPos = 0.0;
+            while (!inBounds(xPos, 35, 3) && opModeIsActive()){//38
+                lastX = curX;
+                lastYLeft = curYLeft;
+                lastAngle = gcAngle;//store old values
+                //
+                curX = xEnc.getCurrentPosition();
+                curYLeft = yEncLeft.getCurrentPosition();
+                gcAngle = getAngle();//retrieve new values
+                //
+                xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
+                yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
+            }
+            still();
+            intakefeed.setPower(1);
+            //
+            moveToPositionLauncher(-5, .1, 2700);//suck up rings
+            sleepLauncher(500, 2700);
+            moveToPositionLauncher(-4, .1, 2700);
+            //
+            turnToAngleErrorLauncher(-8, .1, 4, 2700);//point towards high goal
+            //
+            moveToPositionLauncher(8, .4, 2700);//move towards high goal
+            sleepLauncher(2000,2700);//overshoot rpm to speed up acceleration
+            //
+            feed.setPosition(FEEDPUSH);//launch 1
+            sleepLauncher(500, 2700);
+            feed.setPosition(FEEDPULL);
+            sleepLauncher(500, 2700);
+            feed.setPosition(FEEDPUSH);//launch 2
+            sleepLauncher(500, 2700);
+            feed.setPosition(FEEDPULL);
+            sleepLauncher(500, 2700);
+            feed.setPosition(FEEDPUSH);//launch 3
+            sleepLauncher(500, 2700);
+            launcher.setPower(0);
+            intake.setPower(0);
+            intakefeed.setPower(0);
+            feed.setPosition(FEEDPULL);//stop and retract
+            sleep(500);
+            //
+            turnToAngleError(-140, .5, 8);//turn to area
+            //
+            moveToPosition(-40, .8);//move to area
+            //
+            wobble.setPower(-0.4);//drop wobble goal
             sleep(700);
             wobble.setPower(0);
-            keeper.setPosition(0);//set open
+            keeper.setPosition(0);//release wobble goal
             kelper.setPosition(1);
             sleep(500);
             //
-            moveToPosition(5, .7);
+            moveToPosition(20, 1);
             //
-            turnToAngleError(-28, .6, 5);
-            //
-            moveToPosition(-30, .7);
-            //
-            turnToAngleError(8, .5, 5);
-            //
-            moveToPosition(-39, .6);
-            //
-            keeper.setPosition(1);//set closed
-            kelper.setPosition(0);
-            sleep(700);
-            //
-            turnToAngleError(3, .3, 5);
-            //
-            moveToPosition(80, .7);
-            //
-            turnWithGyro(100, -.5);
-            //
-            keeper.setPosition(0);//set open
-            kelper.setPosition(1);
-            sleep(500);
-            //
-            moveToPosition(10, .8);
-            //
-            turnWithGyro(30, -.6);
-            //
-            moveToPosition(20, .8);
-            //
-            //moveToPosition(35, .5);
         }
         //
         //moveToPosition(10,.7);

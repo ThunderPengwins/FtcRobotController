@@ -149,7 +149,7 @@ public abstract class jeremy extends LinearOpMode {
     Boolean togglePressed = false;
     Boolean psTogglePressed = false;
     //
-    Double launcherRPM = 2600.0;
+    Double launcherRPM = 2700.0;//2600 for stable
     Double psLauncherRPM = 2400.0;
     //
     Long feedStartTime = 0L;
@@ -1313,7 +1313,7 @@ public abstract class jeremy extends LinearOpMode {
         //
     }
     //
-    public void turnToAngleErrorLauncher(double angle, double speed, double error, double rpmGoal, TelemetryPacket packet, FtcDashboard dashboard){
+    public void turnToAngleErrorLauncher(double angle, double speed, double error, double rpmGoal){
         //
         double current = getAngle();
         //
@@ -1326,9 +1326,9 @@ public abstract class jeremy extends LinearOpMode {
         while (!(angleInBounds(angle, error)) && opModeIsActive()){
             calcRPM();
             launcher.setPower(calcPower(rollingAvg, rpmGoal));
-            packet.put("rpm", rollingAvg);
+            /*packet.put("rpm", rollingAvg);
             packet.put("rpm goal", rpmGoal);
-            dashboard.sendTelemetryPacket(packet);
+            dashboard.sendTelemetryPacket(packet);*/
         }
         still();
         //
