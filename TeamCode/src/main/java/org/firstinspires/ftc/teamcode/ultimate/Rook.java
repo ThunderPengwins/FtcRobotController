@@ -139,6 +139,9 @@ public class Rook extends jeremy{
             kelper.setPosition(1);
             sleep(500);
             //
+            telemetry.addData("Auto", "complete!");
+            telemetry.update();
+            //
         }else if(ringNum == 1){
             turnToAngleError(-130, .3, 5);
             //
@@ -269,19 +272,8 @@ public class Rook extends jeremy{
             //
         }
         //
-        //moveToPosition(10,.7);
-        //
-        /*for(int i = 0; i < 3; i++) {
-            sleep(900);
-            feed.setPosition(FEEDPUSH);
-            sleep(1000);
-            feed.setPosition(FEEDPULL);
-            if(i != 2) {
-                strafeToPosition(-7.25, .3);
-            }
-        }
-        launcher.setPower(0);*/
-        //
+        telemetry.addData("Exiting", "program...");
+        telemetry.update();
 
     }
 }
