@@ -79,9 +79,9 @@ public class Luke extends jeremy {
                 motorsWithEncoders();
             }
             //
-            /*if(oxButton){
+            if(oxButton){
                 powerFromWall(0.3);//add rpm control here
-            }*/
+            }
             //
             /*if(gamepad1.right_stick_button && !fdrightpressed){
                 turnToAngle(0, .3);

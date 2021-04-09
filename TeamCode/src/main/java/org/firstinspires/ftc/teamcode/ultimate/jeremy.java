@@ -1609,14 +1609,17 @@ public abstract class jeremy extends LinearOpMode {
         //
         double startPos = frontLeft.getCurrentPosition();
         //
-        while (tape.red() < 80 && opModeIsActive() && ((startPos - frontLeft.getCurrentPosition()) / conversion < 30)){}
+        while (tape.red() < 80 && opModeIsActive() && ((startPos - frontLeft.getCurrentPosition()) / conversion < 30)){
+            calcRPM();
+            launcher.setPower(calcPower(rollingAvg, 2500));
+        }
         still();
         //
         if((startPos - frontLeft.getCurrentPosition()) / conversion > 30){
             return;
         }
         //
-        moveToPosition(-3, .3);
+        moveToPositionLauncher(-3, .3, 2500);
         motorsWithEncoders();
         //
         int lastX = xEnc.getCurrentPosition();//set odo values
@@ -1636,9 +1639,7 @@ public abstract class jeremy extends LinearOpMode {
         frontRight.setPower(-speed);
         backRight.setPower(speed);
         //
-        launcher.setPower(.825);
-        //
-        while (!inBounds(xPos, 20, 3) && opModeIsActive()){
+        while (!inBounds(xPos, 16, 3) && opModeIsActive()){
             lastX = curX;
             lastYLeft = curYLeft;
             lastAngle = gcAngle;//store old values
@@ -1649,39 +1650,37 @@ public abstract class jeremy extends LinearOpMode {
             //
             xPos += getXOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);
             yPos += getYOdometry(curX - lastX, curYLeft - lastYLeft, lastAngle, gcAngle);//run algorithm
+            //
+            calcRPM();
+            launcher.setPower(calcPower(rollingAvg, 2500));
+            //
             telemetry.addData("xPos", xPos);
             telemetry.update();
         }
         still();
-        //turns need to be fixed so they don't go the wrong way
-        turnPast(-6, .1, false);
-        sleep(500);
-        //turnToAngleError(5.5,.1,4);//first turn (right)
-        turnPast(1.5, .1,true);
+        double rpm1 = 2500;
+        turnToAngleErrorLauncher(6.5,.1,2, rpm1);//first turn (right)
         feed.setPosition(FEEDPUSH);
-        sleep(1000);
-        launcher.setPower(.8);
+        sleepLauncher(1000, rpm1);
         //
         feed.setPosition(FEEDPULL);
         //
-        //turnToAngleError(-1, .1,2);//second turn (middle)
-        turnPast(0, .1, false);
-        sleep(1000);
+        double rpm2 = 2425;
+        turnToAngleErrorLauncher(0, .1,2, rpm2);//second turn (middle)
+        sleepLauncher(500, rpm2);
         feed.setPosition(FEEDPUSH);
-        sleep(1000);
-        launcher.setPower(.81);
+        sleepLauncher(1000, rpm2);
         //
         feed.setPosition(FEEDPULL);
         //
-        //turnToAngleError(-6,.1,2);//last turn (left)
-        turnPast(-6, .1, false);
-        sleep(500);
+        turnToAngleErrorLauncher(-6,.1,2, 2475);//last turn (left)
+        sleepLauncher(500, 2475);
         feed.setPosition(FEEDPUSH);
-        sleep(1000);
+        sleepLauncher(1000, 2475);
         launcher.setPower(0);
+        launcherToggle = false;
         //
         feed.setPosition(FEEDPULL);
-        sleep(1000);
     }
     //</editor-fold>
     //
